@@ -12,22 +12,29 @@ class HapsVal(list):
 
 class HapsObj(defaultdict):
     name = ''
-    def __init__(self, **kwargs):
+    def __init__(self, name=None, **kwargs):
         """Init object with attribs from kwargs."""
+        if name:
+            self['@name'] = name
         for k,v in kwargs.items():
-            # Guards our object from setting unintended attributes:
+            # TODO: Guard our object from setting unintended attributes:
             # assert(hasattr(self, k))
+            # Turn object into its name:
+            if isinstance(v, HapsObj):
+                v = v['@name']
             # Collapses collec. of numbers to string:
-            if isinstance(v, collections.Iterable) and \
-            not isinstance(v, types.StringTypes):
+            elif isinstance(v, collections.Iterable) and \
+            not  isinstance(v, types.StringTypes):
                 v = ' '.join(map(str, v))
             self.__setattr__(k, v)
+
 
     def __setattr__(self, name, value):
         """Maps Python object attribs to xml attribs via @notation in json."""
         # Guards our object from setting unintended attributes:
         #assert(hasattr(self, '@'+name))
         super(HapsObj, self).__setitem__(attribute_token+name, value)
+
 
     def add(self, obj):
         """ Add child or children to self. """
@@ -51,6 +58,18 @@ class HapsObj(defaultdict):
         else: 
             self[typename] = [obj]
         return self
+
+
+    def get_element_by_name(self, category, name):
+        """ Recursively search for an item. """
+        if not category in self:
+            for cat in self.key():
+                elements = self[cat]
+        else:
+            for item in self[category]:
+                if name in item:
+                    return item
+
 
     def __repr__(self):
         root=type(self).__name__.lower()
@@ -87,8 +106,8 @@ class Assembly_Instance(HapsObj):
 
 
 class Transform(HapsObj):
- 
-    pass
+    def __init__(self, time=0):
+        self.__setattr__('time', time)
 
 class Object(HapsObj):
     pass
@@ -209,43 +228,47 @@ def dumps_schema():
 
 def main():
     # 
-    project  = Project()
+    project  = Project(format_revision="27")
     scene    = Scene()
-    assembly = Assembly(name='assembly')
+    assembly = Assembly('assembly')
 
     # Like this:
-    object_  = Object(name='object', file='object.obj')
-    assembly.add(object_)
+    # First argument is always a name: 
+    object1  = Object(name='mesh1', file='mesh1.obj')
+    # So we can drop it
+    object2  = Object('mesh2', file='mesh2.obj')
+    assembly.add([object1, object2])
     scene.add(assembly)
 
     # 
-    obj_inst1 = Object_Instance(name='obj_inst1', object='object')
+    obj_inst1 = Object_Instance(name='obj_inst1', object=object1)
     obj_inst1.add(Transform().add(Matrix()))
-    obj_inst2 = Object_Instance(name='obj_inst2', object='object')
-    obj_inst2.add(Transform().add(Matrix(1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16)))
+    obj_inst2 = Object_Instance('obj_inst2', object=object2)
+    obj_inst2.add(Transform(.5).add(Matrix(1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16)))
     assembly.add([obj_inst1, obj_inst2])
 
     # Assembly spageti add:
-    assembly.add(Color(name='red').add(Alpha(1)).add(
-                Parameter(name='color_space', value='sRGB')).add(
+    assembly.add(Color('red').add(Alpha(1)).add(
+                Parameter('color_space', 'sRGB')).add(
                     Values([0.1, 1, 2.0])
             )
         )
-    assembly.add(Object(name='object2', file='filename2.obj'))
+
+    assembly.add(Object('mesh3', file='mesh3.obj'))
 
     #
-    asmb_inst1 = Assembly_Instance().add(Transform().add(Matrix()))
+    asmb_inst1 = Assembly_Instance('asm1', assembly=assembly).add(Transform().add(Matrix()))
     scene.add(asmb_inst1)
 
     # Camera:
-    scene.add(Camera(name="camera1", model="pinhole_camera").add(
+    scene.add(Camera("camera1", model="pinhole_camera").add(
         Transform(time=0).add(
             Look_At(origin=[0,0,0], target=[1,1,1], up=[0,1,0]))
         )
     )
 
     # Colors:
-    spectral = Color(name='green')
+    spectral = Color('green')
     spectral.add(Parameter('color_space', 'spectral'))
     spectral.add(Parameter('wavelength_range', [400, 700]))
     spectral.add(Values([0.092000, 0.097562, 0.095000, 0.096188, 0.097000]))
@@ -253,14 +276,15 @@ def main():
     scene.add(spectral)
 
     # Materials:
-    scene.add(Bsdf(name='sphere_brdf', model='disney_brdf'))
-    scene.add(Surface_Shader(name='sphere_shader', brdf='sphere_brdf'))
-    scene.add(Material(name='greenish', surface_shader='sphere_shader'))
+    bsdf = Bsdf('sphere_brdf', model='disney_brdf')
+    scene.add(bsdf)
+    # TODO: Could we also reference objects, not only their names (buggy atm)
+    scene.add(Surface_Shader('sphere_shader', brdf=bsdf))
+    scene.add(Material('greenish', surface_shader='sphere_shader'))
     obj_inst1.add(Assign_Material(slot='Default', side='front', material='greenish'))
 
 
-
-    frame = Frame(name='beauty').add(
+    frame = Frame('beauty').add(
         Parameter('camera', 'camera')).add(
         Parameter('resolution', '1024 1024')).add(
         Parameter('gamma_correction', "2.2"))
@@ -269,12 +293,12 @@ def main():
     project.add(scene)
 
     config = Configurations()
-    config.add(Configuration(name='base_final').add(
-        Parameter(name='frame_renderer', value='generic')).add(
-        Parameter(name='tile_renderer', value='generic')).add(
-        Parameter(name='pixel_renderer', value='uniform'))
+    config.add(Configuration('base_final').add(
+        Parameter('frame_renderer', 'generic')).add(
+        Parameter('tile_renderer', 'generic')).add(
+        Parameter('pixel_renderer', 'uniform'))
     )
-    config.add(Configuration(name='base_final').add(
+    config.add(Configuration('base_final').add(
         Parameter('frame_renderer', 'generic')).add(
         Parameter('tile_renderer',  'generic')).add(
         Parameter('pixel_renderer', 'uniform')).add(
@@ -288,8 +312,10 @@ def main():
 
 
 
-    print project.tojson()
-    print project
+    # print project.tojson()
+    xml = str(project)
+    with open('test.xml', 'w') as file:
+        file.write(xml)
 
     # dumps_schema()
 
