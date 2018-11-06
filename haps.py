@@ -1,6 +1,6 @@
 
 import collections, types
-from collections import OrderedDict, defaultdict
+from collections import defaultdict
 attribute_token = '@'
 
 
@@ -15,14 +15,13 @@ class HapsObj(defaultdict):
     def __init__(self, name=None, **kwargs):
         """Init object with attribs from kwargs."""
         if name:
-            self['@name'] = name
+            self.__setattr__('name', name)
         for k,v in kwargs.items():
-            # TODO: Guard our object from setting unintended attributes:
-            # assert(hasattr(self, k))
-            # Turn object into its name:
+            # TODO: Guard our object from setting unintended attributes: assert(hasattr(self, k))
+            # Turn Haps object into its name:
             if isinstance(v, HapsObj):
                 v = v['@name']
-            # Collapses collec. of numbers to string:
+            # Collapse iterrables to string:
             elif isinstance(v, collections.Iterable) and \
             not  isinstance(v, types.StringTypes):
                 v = ' '.join(map(str, v))
