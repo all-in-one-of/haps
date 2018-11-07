@@ -93,7 +93,17 @@ def EnvironmentEdf(name, **kwargs):
             ("turbidity_multiplier" ,"1.0" ),
         ])
     env = update_parameters(env, **kwargs)
-    return env, {}
+    return env, None
+
+
+def SpectralColour(name, **kwargs):
+    colour = haps.Color(name)
+    colour.add_parms([
+        ('color_space', 'spectral'),
+        ('wavelength_range', '400 700'),])
+    colour.add(haps.Values((1,1,1))).add(haps.Alpha([1]))
+    colour = update_parameters(colour, **kwargs)
+    return colour, None
 
 
 
