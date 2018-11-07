@@ -106,6 +106,13 @@ def SpectralColour(name, **kwargs):
     return colour, None
 
 
+def Object(name, file, **kwargs):
+    object_ = haps.Object(name, file=file)
+    obj_inst = haps.Object_Instance('inst_'+name)
+    obj_inst.add(haps.Transform().add(haps.Matrix()))
+    # object_ = update_parameters(object_, **kwargs)
+    return object_, obj_inst
+
 
 def Factory(typename,  name, parms=(), **kwargs):
     # FIXME: tuples in parm's values aren't collaped to strings (?)
@@ -119,10 +126,44 @@ def Factory(typename,  name, parms=(), **kwargs):
 
 
 class AppleSeed(object):
+    class TypeFactory(object):
+        """ Lets try differnt approach.
+        """
+        def __init__(self, parent):
+            self.parent = parent
+
+        def create(self, typename, name, **kwargs):
+            """
+            """
+            from sys import modules
+            thismodule = modules[__name__]
+            object_ = None
+            if hasattr(thismodule, typename):
+                objects = getattr(thismodule, typename)(name, **kwargs)
+            elif hasattr(haps, typename):
+                objects = getattr(haps, typename)(name, **kwargs)
+            self.parent.add(objects)
+            return objects
+
     def __init__(self):
+        # This is helper infrastucture to build
+        # minimal working environment
         self.project = haps.Project()
         self.scene   = haps.Scene()
+        self.assembly= haps.Assembly('assembly') # this is just default one.
+        self.scene.add(
+            haps.Assembly_Instance(
+                'default_asmb_inst', assembly='assembly'))
+        self.output  = haps.Output().add(Frame('beauty'))
+        self.config  = haps.Configurations()
+        self.scene.add(self.assembly)
         self.project.add(self.scene)
+        self.project.add(self.output)
+        self.project.add(self.config)
+
+    def factory(self, parent='assembly'):
+        assert(hasattr(self, parent))
+        return self.TypeFactory(getattr(self, parent))
 
     def create(self, typename, name, **kwargs):
         '''Problem is obj can require existance of other object 
@@ -140,9 +181,12 @@ class AppleSeed(object):
                     self.scene.add(objects[key])
                 if key == 'project':
                     self.project.add(objects[key])
+                if key == 'assembly':
+                    self.scene['assembly'][0].add(objects[key])
 
         from sys import modules
         thismodule = modules[__name__]
+        object_ = None
 
         if hasattr(thismodule, typename):
             object_, objects = getattr(thismodule, typename)(name, **kwargs)
@@ -151,6 +195,9 @@ class AppleSeed(object):
         elif hasattr(haps, typename):
             object_ = getattr(haps, typename)(name, **kwargs)
             self.scene.add(object_)
+
+        return object_
+
 
             
 

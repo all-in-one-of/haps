@@ -1,12 +1,15 @@
 from haps import *
 
-# Experiments with API design for appleseed for Houdini.
+""" 
+    Experiments with API design for Appleseed for Houdini.
+"""
 
 def main():
 
     # Low level haps.py interface:
     # Main parts project, scene, assembly
-    # HapsObj.add() addes xml child mode:
+    # HapsObj1.add(HapsObj2):
+    #       -> adds HapsObj2 into HapsObj1 as xml child node:
     project  = Project()
     scene    = Scene()
     assembly = Assembly('assembly')
@@ -155,7 +158,7 @@ def main():
     apple.scene.add(happleseed.ThinLensCamera('renderCam'))
     apple.scene.add(happleseed.Factory('Frame','beauty', 
         parms=(('resolution' ,[1920, 1080]),), 
-        camera='renderCam2'))
+        camera='renderCam'))
 
     # we don't bother
     apple.project.add(Configurations().add(Configuration("final").add_parms([
@@ -163,17 +166,47 @@ def main():
         ('tile_renderer', 'generic'),
         ('pixel_renderer', 'uniform')])))
 
-    # We let apple do the thing (Sunlights adds edf by itself)
+    # We let apple do the thing (Sunlight adds edf by itself)
     apple.create('SunLight', 'sunlight1', cast_indirect_light='false')
     apple.create('SpectralColour', 'white', values="1 1 1") # values doesn't work 
+    apple.create('Color', 'red', values="1 1 1") # values doesn't work 
+    
+    # Some mixed ideas
+    apple.assembly.add(Light('point_light').add(Transform().add(Matrix())))
+    apple.scene.add(Assembly('assembly'))
+    apple.scene['assembly'][0].add(Light('point_light'))
+    assembly = apple.scene['assembly'][0] # get default one
 
-    print apple.project
+    # How about create context with parent, is it general? Probably not.
+    apple = happleseed.AppleSeed()    
+    apple.factory().create('SunLight', 'sun')
+    apple.factory('assembly').create('Object', 'mesh1', file="test.obj")
+
+    # print apple.project
 
     # Higher level should take care of a placement policy (xml schema)
     # to be really useful. How to make it happen? 
     # Callable()s could specifily their details with attributes? 
     # Also should Python object contain its schema or should be deduced 
     # from json/xml (I usually like this approach)?
+
+    # Play with validation:
+    from lxml import etree
+    schema_path = "../appleseed/sandbox/schemas/project.xsd"
+    print apple.project
+    xml = etree.XML(apple.project.toxml())
+    xmlschema_doc = etree.parse(schema_path)
+    xmlschema = etree.XMLSchema(xmlschema_doc)
+    xmlschema.assertValid(xml)
+
+    # apple = happleseed.AppleSeed() 
+    # apple.scene.add(happleseed.ThinLensCamera('camera'))
+    # xml = project.toxml()
+    # print xml
+    # xml = etree.XML(xml)
+
+    # print xmlschema.assertValid(xml)
+
 
     
 
