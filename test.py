@@ -129,7 +129,7 @@ def main():
     # FIXME: .add() doesn't like our optional returns (fires assertion)
     # This also triggers allowance of None at hapsObj.add() level. Noty!
     scene.add(happleseed.SunLight('mysun'))
-    print scene
+    # print scene
 
     # (2) maybe with explicite factory (does it bring much to the table?)
     scene = Scene()
@@ -141,15 +141,33 @@ def main():
     # print scene
 
     # (3) or more object oriented?
-    # Nice thing is that .create() uses .Callable()s whose in turn create 
+    apple = happleseed.AppleSeed()
+    apple.create('SunLight', 'sunlight1', cast_indirect_light='false')
+    # Nice thing is that .create() uses .Callable()s which in turn create 
     # objects ready to work, and their parms still could be overwritten with 
     # **kwargs which are passed them from AppleSeed mothersheap.
     # Thus Appleseed doesn't have to know much about objects' particularities
-    # == they are self defined inside Callable()s, yet directable from outside. 
-    # In other words (1), (2) and (3) could be used together.
+    # -> they are self defined inside Callable()s, yet directable from outside. 
+
+    # (1), (2) and (3) could and perhpas should be usable together:
+    # We take care of complete creation by ourselfs:
     apple = happleseed.AppleSeed()
+    apple.scene.add(happleseed.ThinLensCamera('renderCam'))
+    apple.scene.add(happleseed.Factory('Frame','beauty', 
+        parms=(('resolution' ,[1920, 1080]),), 
+        camera='renderCam2'))
+
+    # we don't bother
+    apple.project.add(Configurations().add(Configuration("final").add_parms([
+        ('frame_renderer', 'generic'), 
+        ('tile_renderer', 'generic'),
+        ('pixel_renderer', 'uniform')])))
+
+    # We let apple do the thing (Sunlights adds edf by itself)
     apple.create('SunLight', 'sunlight1', cast_indirect_light='false')
-    # print apple.project
+    apple.create('SpectralColour', 'white', values="1 1 1") # values doesn't work 
+
+    print apple.project
 
     # Higher level should take care of a placement policy (xml schema)
     # to be really useful. How to make it happen? 
