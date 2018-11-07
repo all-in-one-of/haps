@@ -48,6 +48,8 @@ def PinholeCamera(name, **kwargs):
     camera = update_parameters(camera, **kwargs)
     return camera, None
 
+# TODO: make choices predefined (enumarator style)
+# Possible values for filters are: blackman-harris (Blackman-Harris), box (Box), catmull (Catmull-Rom Spline), bspline (Cubic B-spline), gaussian (Gaussian), lanczos (Lanczos), mitchell (Mitchell-Netravali), triangle (Triangle).
 
 def Frame(name, **kwargs):
     frame = haps.Frame(name)
@@ -56,7 +58,7 @@ def Frame(name, **kwargs):
         ("resolution", [1280, 720]),  
         ("crop_window", None),
         ("tile_size" ,  16), 
-        ("filter"  'blackman-harris'), # Possible values are: blackman-harris (Blackman-Harris), box (Box), catmull (Catmull-Rom Spline), bspline (Cubic B-spline), gaussian (Gaussian), lanczos (Lanczos), mitchell (Mitchell-Netravali), triangle (Triangle).
+        ("filter"  'blackman-harris'), 
         ("filter_size", 1.5 )])
     frame = update_parameters(frame, **kwargs)
 
@@ -74,7 +76,7 @@ def SunLight(name, **kwargs):
         ])
     light = update_parameters(light, **kwargs)
     edf, tmp = EnvironmentEdf('environment_edf')
-    return light, {'scene': [edf]}
+    return light, edf #{'scene': [edf]}
 
 
 
@@ -95,14 +97,14 @@ def EnvironmentEdf(name, **kwargs):
 
 
 
-def Factory(typename,  name, parms, **kwargs):
+def Factory(typename,  name, parms=(), **kwargs):
+    # FIXME: tuples in parm's values aren't collaped to strings (?)
     object_ = getattr(haps, typename)(name, **kwargs)
     assert isinstance(parms, collections.Iterable)
     for parm in parms:
         k, v = parm
         object_.add(haps.Parameter(k, v))
     return object_
-
 
 
 
@@ -120,6 +122,8 @@ class AppleSeed(object):
             I'm not ready for that decision yet. 
         '''
         def _add_sideeffects(objects):
+            # Allows Nones (???)
+            if not objects: return
             assert(isinstance(objects, dict))
             for key in objects:
                 if key == 'scene':

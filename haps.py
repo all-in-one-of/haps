@@ -45,10 +45,13 @@ class HapsObj(defaultdict):
             _add_value(obj)
             return self
 
-        if isinstance(obj, list):
-            [self.add(x) for x in obj if isinstance(x, HapsObj)]
+        if isinstance(obj, list) or isinstance(obj, tuple):
+            [self.add(x) for x in obj]
             return self
 
+        # We allow to pass Nones here:
+        if obj == None: return self
+        # ...but besides that only hapsies:
         assert(isinstance(obj, HapsObj))
         typename = type(obj).__name__.lower()
 
