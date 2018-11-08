@@ -143,6 +143,11 @@ class Parameter(HapsObj):
             self.__setattr__('value', value)
 
 
+class Parameters(HapsObj):
+    def __init__(self, name):
+        self.__setattr__('name', name)
+
+
 class Bsdf(HapsObj):
     pass
 

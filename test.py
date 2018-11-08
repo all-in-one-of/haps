@@ -96,7 +96,7 @@ def main():
         Parameter('tile_renderer',  'generic'),
         Parameter('pixel_renderer', 'uniform'),
         Parameter('light_engine', 'pt').add(
-            Parameter('pt').add([
+            Parameters('pt').add([
                 Parameter('dl_light_samples', 1), 
                 Parameter('enable_ibl', "true")])
             )
@@ -125,14 +125,8 @@ def main():
     # This becomes ugly...
     camera, something_we_dont_know = happleseed.ThinLensCamera('renderCam')
     # something_we_dont_know has to be added manually either to project or scene 
-    # or gods know where else. 
+    # or gods know where else?
     scene.add(camera)
-
-    # Risky (SunLight() could return something that shouln't be passed to the scene.)
-    # FIXME: .add() doesn't like our optional returns (fires assertion)
-    # This also triggers allowance of None at hapsObj.add() level. Noty!
-    scene.add(happleseed.SunLight('mysun'))
-    # print scene
 
     # (2) maybe with explicite factory (does it bring much to the table?)
     scene = Scene()
@@ -152,7 +146,7 @@ def main():
     # Thus Appleseed doesn't have to know much about objects' particularities
     # -> they are self defined inside Callable()s, yet directable from outside. 
 
-    # (1), (2) and (3) could and perhpas should be usable together:
+    # (1), (2) and (3) could and perhpas should be used together:
     # We take care of complete creation by ourselfs:
     apple = happleseed.AppleSeed()
     apple.scene.add(happleseed.ThinLensCamera('renderCam'))
@@ -165,24 +159,34 @@ def main():
         ('frame_renderer', 'generic'), 
         ('tile_renderer', 'generic'),
         ('pixel_renderer', 'uniform')])))
-
-    # We let apple do the thing (Sunlight adds edf by itself)
-    apple.create('SunLight', 'sunlight1', cast_indirect_light='false')
-    apple.create('SpectralColour', 'white', values="1 1 1") # values doesn't work 
-    apple.create('Color', 'red', values="1 1 1") # values doesn't work 
     
     # Some mixed ideas
+    # point light is added directly to assembly
     apple.assembly.add(Light('point_light').add(Transform().add(Matrix())))
-    apple.scene.add(Assembly('assembly'))
+    # assembly to scene likewise
+    apple.scene.add(Assembly('assembly2'))
+    #
     apple.scene['assembly'][0].add(Light('point_light'))
+    #
     assembly = apple.scene['assembly'][0] # get default one
-
+    #
     # How about create context with parent, is it general? Probably not.
     apple = happleseed.AppleSeed()    
+    # by default first assembly is a scene:
     apple.factory().create('Light', 'sun', model='point_light')
-    apple.factory('assembly').create('Object', name='mesh1', model="mesh")
+    # This addes three objects:
+    apple.factory('scene').create('Environment', 'preetham_env', turbidity=2.0)
+    # len(objects) == 3
+    objects = happleseed.Environment('preetham_env', turbidity=2.0) 
+    # This for example is not valided with Appleseed schema: 
+    # apple.factory('scene').create('MeshObject'))
+    apple.factory().create('MeshObject','mesh1', filename="mesh.obj")
 
-    print apple.project
+    # Debug with line number
+    counter = 1
+    for line in str(apple.project).split('\n'):
+        print str(counter) + "   " + line
+        counter += 1
 
     # Higher level should take care of a placement policy (xml schema)
     # to be really useful. How to make it happen? 
