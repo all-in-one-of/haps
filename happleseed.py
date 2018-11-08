@@ -106,9 +106,9 @@ def SpectralColour(name, **kwargs):
     return colour, None
 
 
-def Object(name, file, **kwargs):
-    object_ = haps.Object(name, file=file)
-    obj_inst = haps.Object_Instance('inst_'+name)
+def Object(name, model, **kwargs):
+    object_ = haps.Object(name, model=model)
+    obj_inst = haps.Object_Instance('inst_'+name, object=name)
     obj_inst.add(haps.Transform().add(haps.Matrix()))
     # object_ = update_parameters(object_, **kwargs)
     return object_, obj_inst
