@@ -179,10 +179,10 @@ def main():
 
     # How about create context with parent, is it general? Probably not.
     apple = happleseed.AppleSeed()    
-    apple.factory().create('SunLight', 'sun')
-    apple.factory('assembly').create('Object', 'mesh1', file="test.obj")
+    apple.factory().create('Light', 'sun', model='point_light')
+    apple.factory('assembly').create('Object', name='mesh1', model="mesh")
 
-    # print apple.project
+    print apple.project
 
     # Higher level should take care of a placement policy (xml schema)
     # to be really useful. How to make it happen? 
@@ -193,22 +193,10 @@ def main():
     # Play with validation:
     from lxml import etree
     schema_path = "../appleseed/sandbox/schemas/project.xsd"
-    print apple.project
     xml = etree.XML(apple.project.toxml())
     xmlschema_doc = etree.parse(schema_path)
     xmlschema = etree.XMLSchema(xmlschema_doc)
     xmlschema.assertValid(xml)
-
-    # apple = happleseed.AppleSeed() 
-    # apple.scene.add(happleseed.ThinLensCamera('camera'))
-    # xml = project.toxml()
-    # print xml
-    # xml = etree.XML(xml)
-
-    # print xmlschema.assertValid(xml)
-
-
-    
 
 
 
