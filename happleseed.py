@@ -65,19 +65,29 @@ def Frame(name, **kwargs):
     return frame, None
 
 
-def SunLight(name, **kwargs):
-    light = haps.Light(name, model='sun_light')
-    light.add_parms([
-            ("cast_indirect_light" , "true"),
-            ("environment_edf" , "environment_edf"),
-            ("importance_multiplier" , 1.0),
-            ("radiance_multiplier" , 1.0),
-            ("turbidity" , 1.0)
-        ])
-    light = update_parameters(light, **kwargs)
-    edf, tmp = EnvironmentEdf('environment_edf')
-    return light, edf #{'scene': [edf]}
+# def SunLight(name, **kwargs):
+#     light = haps.Light(name, model='sun_light')
+#     light.add_parms([
+#             ("cast_indirect_light" , "true"),
+#             ("environment_edf" , "environment_edf"),
+#             ("importance_multiplier" , 1.0),
+#             ("radiance_multiplier" , 1.0),
+#             ("turbidity" , 1.0)
+#         ])
+#     light = update_parameters(light, **kwargs)
+#     edf, tmp = EnvironmentEdf('environment_edf')
+#     return light, edf #{'scene': [edf]}
 
+
+def Environment(name, **kwargs):
+    env = haps.Environment(name, model='generic_environment')
+    env.add_parms([('environment_edf',   'environment_edf'),
+                  ('environment_shader', 'environment_shader')])
+    shader = haps.Environment_Shader('environment_shader',
+        model='edf_environment_shader')
+    shader.add(haps.Parameter('environment_edf', 'environment_edf'))
+    edf = EnvironmentEdf('environment_edf', **kwargs)
+    return env, shader, edf
 
 
 def EnvironmentEdf(name, **kwargs):
@@ -96,23 +106,43 @@ def EnvironmentEdf(name, **kwargs):
     return env, None
 
 
-def SpectralColour(name, **kwargs):
+def SpectralColour(name, values=[1,1,1], alpha=1.0, **kwargs):
     colour = haps.Color(name)
     colour.add_parms([
         ('color_space', 'spectral'),
         ('wavelength_range', '400 700'),])
-    colour.add(haps.Values((1,1,1))).add(haps.Alpha([1]))
+    colour.add(haps.Values(values).add(haps.Alpha([alpha])))
     colour = update_parameters(colour, **kwargs)
     return colour, None
 
 
-def Object(name, model, **kwargs):
-    object_ = haps.Object(name, model=model)
+def MeshObject(name, filename, **kwargs):
+    object_ = haps.Object(name, model='mesh_object')
+    object_.add(haps.Parameter('filename', filename))
     obj_inst = haps.Object_Instance('inst_'+name, object=name)
     obj_inst.add(haps.Transform().add(haps.Matrix()))
-    # object_ = update_parameters(object_, **kwargs)
     return object_, obj_inst
 
+
+def InteractiveConfiguration(name='base_interactive', **kwargs):
+    conf = haps.Configuration(name, base='base_interactive')
+    conf.add_parms([
+            ("lighting_engine", "pt"),
+            ("sampling_mode", "qmc")])
+    conf.add(haps.Parameters('pt').add_parms([
+                ("dl_light_samples", "1.000000"),
+                ("dl_low_light_threshold", "0.000000"),
+                ("enable_caustics", "true"),
+                ("enable_dl", "true"),
+                ("enable_ibl", "true"),
+                ("ibl_env_samples", "1.000000"),
+                ("max_bounces", "-1"),
+                ("max_diffuse_bounces", "-1"),
+                ("max_glossy_bounces", "-1"),
+                ("max_specular_bounces", "-1"),
+                ("next_event_estimation", "true"),
+                ("rr_min_path_length", "6")]))
+    return conf
 
 def Factory(typename,  name, parms=(), **kwargs):
     # FIXME: tuples in parm's values aren't collaped to strings (?)
@@ -156,6 +186,8 @@ class AppleSeed(object):
                 'default_asmb_inst', assembly='assembly'))
         self.output  = haps.Output().add(Frame('beauty'))
         self.config  = haps.Configurations()
+        self.config.add(InteractiveConfiguration())
+
         self.scene.add(self.assembly)
         self.project.add(self.scene)
         self.project.add(self.output)
@@ -189,12 +221,12 @@ class AppleSeed(object):
         object_ = None
 
         if hasattr(thismodule, typename):
-            object_, objects = getattr(thismodule, typename)(name, **kwargs)
-            _add_sideeffects(objects)
-            self.scene.add(object_)
+            objects = getattr(thismodule, typename)(name, **kwargs)
+            _add_sideeffects(objects[1:])
+            self.scene.add(objects[0])
         elif hasattr(haps, typename):
-            object_ = getattr(haps, typename)(name, **kwargs)
-            self.scene.add(object_)
+            objects = getattr(haps, typename)(name, **kwargs)
+            self.scene.add(objects[0])
 
         return object_
 
