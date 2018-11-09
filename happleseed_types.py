@@ -153,7 +153,7 @@ def PhysicalSurfaceShader(name, lighting_samples=1):
     shader.add(haps.Parameter('lighting_samples', lighting_samples))
     return shader
 
-def DisneyMaterialLayer(name, **kwargs):
+def DisneyMaterialLayer(name, layer_number, **kwargs):
     parms = haps.Parameters(name)
     parms.add_parms([
             ("anisotropic", "0"),
@@ -161,8 +161,8 @@ def DisneyMaterialLayer(name, **kwargs):
             ("clearcoat", "0.0"),
             ("clearcoat_gloss", "1.0"),
             ("folded", "false"),
-            ("layer_name", "layer1"),
-            ("layer_number", "1"),
+            ("layer_name", name),
+            ("layer_number", layer_number),
             ("mask", "1"),
             ("metallic", "0.85"),
             ("roughness", "0.15"),
@@ -175,7 +175,7 @@ def DisneyMaterialLayer(name, **kwargs):
     parms = update_parameters(parms, **kwargs)
     return parms
 
-def DisneyMaterial(name, **kwargs):
+def DisneyMaterial(name, layers=1, **kwargs):
     shader   = PhysicalSurfaceShader('surface_shader')
     material = haps.Material(name, model='disney_material')
     material.add_parms([
@@ -186,6 +186,7 @@ def DisneyMaterial(name, **kwargs):
                 ("surface_shader", "surface_shader")
         ])
     material = update_parameters(material, **kwargs)
-    layer    = DisneyMaterialLayer('layer1')
-    material.add(layer)
+    for layer in range(1, layers+1):
+        name = 'layer%i' % layer
+        material.add(DisneyMaterialLayer(name, layer))
     return shader, material
