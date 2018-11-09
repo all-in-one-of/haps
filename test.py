@@ -171,7 +171,7 @@ def main():
     apple.project.add(apple.scene)
     apple.scene.add(apple.assembly)  
     # by default first assembly is a scene:
-    apple.factory().create('Light', 'sun', model='point_light')
+    apple.factory().create('Light', 'lamp', model='point_light')
     # This addes three objects:
     apple.factory('scene').create('Environment', 'preetham_env', turbidity=2.0)
     # len(objects) == 3
