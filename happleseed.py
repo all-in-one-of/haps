@@ -27,12 +27,14 @@ class AppleSeed(object):
             self.parent = parent
 
         def add(self, typename, name, **kwargs):
-            """Alias for create()."""
-            self.create(typename, name, **kwargs)
+            """Alias for insert()."""
+            objects = self.create(typename, name, **kwargs)
+            self.parent.add(objects)
 
         def insert(self, typename, name, **kwargs):
-            """Alias for create()."""
-            self.create(typename, name, **kwargs)
+            """Inserts objects returned by create()."""
+            objects = self.create(typename, name, **kwargs)
+            self.parent.add(objects)
 
 
         def create(self, typename, name, **kwargs):
@@ -57,10 +59,8 @@ class AppleSeed(object):
                 objects = (getattr(haps, typename)(name, **kwargs),)
             else:
                 raise Exception("Can't create an object of unknow type: %s" % typename)
-
             for obj in objects:
                 _remove_duplicate(self.parent, obj)
-            self.parent.add(objects)
             return objects
 
     def __init__(self):
