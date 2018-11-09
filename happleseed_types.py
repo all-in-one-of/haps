@@ -145,3 +145,47 @@ def InteractiveConfiguration(name='base_interactive', **kwargs):
                 ("next_event_estimation", "true"),
                 ("rr_min_path_length", "6")]))
     return conf
+
+
+
+def PhysicalSurfaceShader(name, lighting_samples=1):
+    shader = haps.Surface_Shader(name, model='physical_surface_shader')
+    shader.add(haps.Parameter('lighting_samples', lighting_samples))
+    return shader
+
+def DisneyMaterialLayer(name, **kwargs):
+    parms = haps.Parameters(name)
+    parms.add_parms([
+            ("anisotropic", "0"),
+            ("base_color", "[0.619608, 0.309804, 0.164706]"),
+            ("clearcoat", "0.0"),
+            ("clearcoat_gloss", "1.0"),
+            ("folded", "false"),
+            ("layer_name", "layer1"),
+            ("layer_number", "1"),
+            ("mask", "1"),
+            ("metallic", "0.85"),
+            ("roughness", "0.15"),
+            ("sheen", "0.0"),
+            ("sheen_tint", "0.0"),
+            ("specular", "0.5"),
+            ("specular_tint", "0.0"),
+            ("subsurface", "0.0"),
+        ])
+    parms = update_parameters(parms, **kwargs)
+    return parms
+
+def DisneyMaterial(name, **kwargs):
+    shader   = PhysicalSurfaceShader('surface_shader')
+    material = haps.Material(name, model='disney_material')
+    material.add_parms([
+                ("alpha_mask", "0"),
+                ("bump_amplitude", "1.0"),
+                ("displacement_method", "bump"),
+                ("normal_map_up", "z"),
+                ("surface_shader", "surface_shader")
+        ])
+    material = update_parameters(material, **kwargs)
+    layer    = DisneyMaterialLayer('layer1')
+    material.add(layer)
+    return shader, material

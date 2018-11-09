@@ -178,7 +178,7 @@ def main():
     objects = happleseed.Environment('preetham_env', turbidity=2.0) 
     # This for example is not valided with Appleseed schema: 
     # apple.factory('scene').create('MeshObject'))
-    apple.factory().create('MeshObject','mesh1', filename="mesh.obj")
+    mesh = apple.factory().create('MeshObject','mesh1', filename="mesh.obj")
 
     # Yet another way
     apple = happleseed.AppleSeed()
@@ -192,6 +192,7 @@ def main():
     # Replace one element:
     apple.Config('base_interactive').insert('Parameter', 'lighting_engine', value='pt')
     apple.Output().insert('Frame', 'beauty', resolution=[1920, 1080])
+    apple.Assembly().insert('DisneyMaterial', 'some_disney_material', base_color=[1,0,0])
 
 
     # Debug with line number
