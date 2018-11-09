@@ -138,9 +138,17 @@ class Alpha(HapsVal):
 
 class Parameter(HapsObj):
     def __init__(self, name, value=None):
+        # super(Parameter, self).__init__(name, value=value)
         self.__setattr__('name', name)
         if value:
             self.__setattr__('value', value)
+
+    # def __setattr__(self, name, value):
+    #     if isinstance(value, collections.Iterable) and \
+    #     not  isinstance(value, types.StringTypes):
+    #         value = ' '.join(map(str, value))
+    #     super(Parameter, self).__setattr__('@value', value)
+
 
 
 class Parameters(HapsObj):

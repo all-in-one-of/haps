@@ -1,5 +1,6 @@
 import haps
 import collections
+import types
 
 def update_parameters(obj, **kwargs):
     token = haps.attribute_token
@@ -7,6 +8,9 @@ def update_parameters(obj, **kwargs):
     for key, value in kwargs.items():
         if key in keys:
             parm = obj['parameter'][keys.index(key)]
+            if isinstance(value, collections.Iterable) and \
+            not  isinstance(value, types.StringTypes):
+                value = ' '.join(map(str, value))
             parm[token+'value'] = value
     return obj
     
@@ -58,7 +62,7 @@ def Frame(name, **kwargs):
         ("resolution", [1280, 720]),  
         ("crop_window", None),
         ("tile_size" ,  16), 
-        ("filter"  'blackman-harris'), 
+        ("filter",  'blackman-harris'), 
         ("filter_size", 1.5 )])
     frame = update_parameters(frame, **kwargs)
 
@@ -172,20 +176,36 @@ class AppleSeed(object):
             """Alias for create()."""
             self.create(typename, name, **kwargs)
 
+        def insert(self, typename, name, **kwargs):
+            """Alias for create()."""
+            self.create(typename, name, **kwargs)
+
+
         def create(self, typename, name, **kwargs):
             """ Creates object of type 'typename' defined either
                 inside this module or 'haps' module.
             """
+            def _remove_duplicate(parent, obj):
+                typename = type(obj).__name__.lower()
+                if typename in parent.keys():
+                    for elem in parent[typename]:
+                        if elem[haps.attribute_token+'name'] == name:
+                            index = parent[typename].index(elem)
+                            return parent[typename].pop(index)
+                return None
+
             from sys import modules
+
             thismodule = modules[__name__]
-            object_ = None
             if hasattr(thismodule, typename):
                 objects = getattr(thismodule, typename)(name, **kwargs)
             elif hasattr(haps, typename):
-                objects = getattr(haps, typename)(name, **kwargs)
+                objects = (getattr(haps, typename)(name, **kwargs),)
             else:
                 raise Exception("Can't create an object of unknow type: %s" % typename)
 
+            for obj in objects:
+                _remove_duplicate(self.parent, obj)
             self.parent.add(objects)
             return objects
 
@@ -216,58 +236,29 @@ class AppleSeed(object):
                 return self.TypeFactory(assembly)
         return self.TypeFactory(self.assembly)
 
-    def Config(self):
+    def Config(self, name=None, **kwargs):
         """Adds configuration object 'name' to the default configuration."""
         if not self.config:
-            self.config = haps.Configurations().add(
-                InteractiveConfiguration())
+            self.config = haps.Configurations()
             self.project.add(self.config)
+        if not name: 
+            return self.TypeFactory(self.config)
+        for config in self.config['configuration']:
+            if config[haps.attribute_token+'name'] == name:
+                return  self.TypeFactory(config)
         return self.TypeFactory(self.config)
 
-    def Output(self, name, **kwargs):
+    def Output(self):
         """Adds Frame object to project.output."""
         if not self.output:
-            self.output = haps.Output().add(Frame('beauty', **kwargs))
+            self.output = haps.Output()
             self.project.add(self.output)
-        self.TypeFactory(self.output).create('Frame', name, **kwargs)
-
+        return self.TypeFactory(self.output)
 
     def factory(self, parent='assembly'):
         assert(hasattr(self, parent))
         return self.TypeFactory(getattr(self, parent))
 
-    def create(self, typename, name, **kwargs):
-        '''Problem is obj can require existance of other object 
-            they don't create themselfs. Should we bother?
-            We could easily fix it with factory pattern where 
-            new object is always created via parrent object.
-            I'm not ready for that decision yet. 
-        '''
-        def _add_sideeffects(objects):
-            # Allows Nones (???)
-            if not objects: return
-            assert(isinstance(objects, dict))
-            for key in objects:
-                if key == 'scene':
-                    self.scene.add(objects[key])
-                if key == 'project':
-                    self.project.add(objects[key])
-                if key == 'assembly':
-                    self.scene['assembly'][0].add(objects[key])
-
-        from sys import modules
-        thismodule = modules[__name__]
-        object_ = None
-
-        if hasattr(thismodule, typename):
-            objects = getattr(thismodule, typename)(name, **kwargs)
-            _add_sideeffects(objects[1:])
-            self.scene.add(objects[0])
-        elif hasattr(haps, typename):
-            objects = getattr(haps, typename)(name, **kwargs)
-            self.scene.add(objects[0])
-
-        return object_
 
 
             

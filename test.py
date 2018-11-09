@@ -138,14 +138,6 @@ def main():
     # print scene
 
     # (3) or more object oriented?
-    apple = happleseed.AppleSeed()
-    apple.create('SunLight', 'sunlight1', cast_indirect_light='false')
-    # Nice thing is that .create() uses .Callable()s which in turn create 
-    # objects ready to work, and their parms still could be overwritten with 
-    # **kwargs which are passed them from AppleSeed mothersheap.
-    # Thus Appleseed doesn't have to know much about objects' particularities
-    # -> they are self defined inside Callable()s, yet directable from outside. 
-
     # (1), (2) and (3) could and perhpas should be used together:
     # We take care of complete creation by ourselfs:
     apple = happleseed.AppleSeed()
@@ -196,7 +188,11 @@ def main():
     apple.scene.add(Assembly('new_assembly'))
     apple.scene.add(Assembly_Instance('na_inst', assembly='new_assembly'))
     apple.Assembly('new_assembly').add('MeshObject', 'torus', filename='torus.obj')
-    # apple.Config().add('debug')
+    apple.Config().insert('InteractiveConfiguration', 'base_interactive')
+    # Replace one element:
+    apple.Config('base_interactive').insert('Parameter', 'lighting_engine', value='pt')
+    apple.Output().insert('Frame', 'beauty', resolution=[1920, 1080])
+
 
     # Debug with line number
     counter = 1
