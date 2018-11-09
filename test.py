@@ -149,6 +149,7 @@ def main():
     # (1), (2) and (3) could and perhpas should be used together:
     # We take care of complete creation by ourselfs:
     apple = happleseed.AppleSeed()
+    apple.scene = Scene()
     apple.scene.add(happleseed.ThinLensCamera('renderCam'))
     apple.scene.add(happleseed.Factory('Frame','beauty', 
         parms=(('resolution' ,[1920, 1080]),), 
@@ -162,6 +163,7 @@ def main():
     
     # Some mixed ideas
     # point light is added directly to assembly
+    apple.assembly = Assembly('assembly')
     apple.assembly.add(Light('point_light').add(Transform().add(Matrix())))
     # assembly to scene likewise
     apple.scene.add(Assembly('assembly2'))
@@ -171,7 +173,11 @@ def main():
     assembly = apple.scene['assembly'][0] # get default one
     #
     # How about create context with parent, is it general? Probably not.
-    apple = happleseed.AppleSeed()    
+    apple = happleseed.AppleSeed()  
+    apple.scene = Scene()
+    apple.assembly = Assembly('assembly')
+    apple.project.add(apple.scene)
+    apple.scene.add(apple.assembly)  
     # by default first assembly is a scene:
     apple.factory().create('Light', 'sun', model='point_light')
     # This addes three objects:
@@ -181,6 +187,16 @@ def main():
     # This for example is not valided with Appleseed schema: 
     # apple.factory('scene').create('MeshObject'))
     apple.factory().create('MeshObject','mesh1', filename="mesh.obj")
+
+    # Yet another way
+    apple = happleseed.AppleSeed()
+    apple.Scene().add('Environment', 'preetham_env', turbidity=2.0)
+    apple.Assembly('assembly').add('Light', 'sun', model='point_light')
+    apple.Assembly().add('MeshObject', 'torus', filename='torus.obj')
+    apple.scene.add(Assembly('new_assembly'))
+    apple.scene.add(Assembly_Instance('na_inst', assembly='new_assembly'))
+    apple.Assembly('new_assembly').add('MeshObject', 'torus', filename='torus.obj')
+    # apple.Config().add('debug')
 
     # Debug with line number
     counter = 1
@@ -195,6 +211,12 @@ def main():
     # from json/xml (I usually like this approach)?
 
     # Play with validation:
+    try:
+        import lxml
+    except:
+        print "No lxml module. Quiting now."
+        quit()
+
     from lxml import etree
     schema_path = "../appleseed/sandbox/schemas/project.xsd"
     xml = etree.XML(apple.project.toxml())
