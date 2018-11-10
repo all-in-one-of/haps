@@ -1,7 +1,7 @@
 
 import collections, types
 from collections import defaultdict
-attribute_token = '@'
+attribute_token = 'attr:'
 FORMAT_REVISION = 27
 
 
@@ -22,7 +22,7 @@ class HapsObj(defaultdict):
         for k,v in kwargs.items():
             # Turn Haps object into its name:
             if isinstance(v, HapsObj):
-                v = v['@name']
+                v = v[attribute_token+'name']
             # Collapse iterrables to string:
             elif isinstance(v, collections.Iterable) and \
             not  isinstance(v, types.StringTypes):
