@@ -119,13 +119,7 @@ def main():
     scene   = Scene()
 
     # (1) happleseend.Callable() returns HapsObj
-    # type + dict with additional objects created by the type 
-    # in order to be complete. They have to be added to project or scene 
-    # (like bsdfs, edfs, shaders etc)
-    # This becomes ugly...
-    camera, something_we_dont_know = happleseed.ThinLensCamera('renderCam')
-    # something_we_dont_know has to be added manually either to project or scene 
-    # or gods know where else?
+    camera = happleseed.ThinLensCamera('renderCam')
     scene.add(camera)
 
     # (2) maybe with explicite factory (does it bring much to the table?)

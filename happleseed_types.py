@@ -108,14 +108,14 @@ def EnvironmentEdf(name, **kwargs):
     return env, None
 
 
-def SpectralColour(name, values=[1,1,1], alpha=1.0, **kwargs):
-    colour = haps.Color(name)
-    colour.add_parms([
+def SpectralColor(name, values=[1,1,1], alpha=1.0, **kwargs):
+    color = haps.Color(name)
+    color.add_parms([
         ('color_space', 'spectral'),
         ('wavelength_range', '400 700'),])
-    colour.add(haps.Values(values).add(haps.Alpha([alpha])))
-    colour = update_parameters(colour, **kwargs)
-    return colour, None
+    color.add(haps.Values(values).add(haps.Alpha([alpha])))
+    color = update_parameters(color, **kwargs)
+    return color, None
 
 
 def MeshObject(name, filename, **kwargs):
@@ -144,14 +144,14 @@ def InteractiveConfiguration(name='base_interactive', **kwargs):
                 ("max_specular_bounces", "-1"),
                 ("next_event_estimation", "true"),
                 ("rr_min_path_length", "6")]))
-    return conf
+    return conf, None
 
 
 
 def PhysicalSurfaceShader(name, lighting_samples=1):
     shader = haps.Surface_Shader(name, model='physical_surface_shader')
     shader.add(haps.Parameter('lighting_samples', lighting_samples))
-    return shader
+    return shader, None
 
 def DisneyMaterialLayer(name, layer_number, **kwargs):
     parms = haps.Parameters(name)
@@ -173,7 +173,7 @@ def DisneyMaterialLayer(name, layer_number, **kwargs):
             ("subsurface", "0.0"),
         ])
     parms = update_parameters(parms, **kwargs)
-    return parms
+    return parms, None
 
 def DisneyMaterial(name, layers=1, **kwargs):
     shader   = PhysicalSurfaceShader('surface_shader')

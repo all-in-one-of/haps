@@ -62,21 +62,30 @@ class HapsObj(defaultdict):
         return self
 
     def add_parms(self, parms):
-        """Add parameters from a list of tuples sutable for parm's init.
+        """Add parameters from a list of tuples suitable for parm's init.
         """
         assert isinstance(parms, collections.Iterable)
         [self.add(Parameter(parm[0], parm[1])) for parm in parms]
         return self
 
     def get(self, name):
-        """"""
+        """Get local attribute 'name'."""
         attr = attribute_token+name
         if attr in self.keys():
             return self[attr]
-        return None
+        else:
+            raise Exception('Attribute "%s" not present' % name)
+        return
 
     def find(self, name):
-        return get_by_name(name)
+        return self.get_by_name(name)
+
+    def remove(self, obj):
+        # obj = self.find(obj.get(name))
+        typename = type(obj).__name__.lower()
+        assert(obj in self[typename])
+        index = self[typename].index(obj)
+        return self[typename].pop(index)
 
     def get_by_name(self, name):
         """ Search for an item. """
@@ -93,12 +102,8 @@ class HapsObj(defaultdict):
             if typename.startswith(attribute_token):
                 continue
             result = get_child(children, name)
-            if result:
+            if result: 
                 return result
-    
-
-
-        # We should not have two children of the same name:
         return None
 
 

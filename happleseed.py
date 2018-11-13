@@ -41,27 +41,25 @@ class AppleSeed(object):
             """ Creates object of type 'typename' defined either
                 inside this module or 'haps' module.
             """
-            def _remove_duplicate(parent, obj):
-                typename = type(obj).__name__.lower()
-                if typename in parent.keys():
-                    for elem in parent[typename]:
-                        if elem[haps.attribute_token+'name'] == name:
-                            index = parent[typename].index(elem)
-                            return parent[typename].pop(index)
-                return None
+            def _remove_duplicate(parent, name):
+                obj = parent.find(name)
+                if obj:
+                    return parent.remove(obj)
 
             from sys import modules
 
             thismodule = modules[__name__]
+            objects = []
             if hasattr(thismodule, typename):
-                objects = getattr(thismodule, typename)(name, **kwargs)
+                objects = list(getattr(thismodule, typename)(name, **kwargs))
             elif hasattr(haps, typename):
-                objects = (getattr(haps, typename)(name, **kwargs),)
+                objects += getattr(haps, typename)(name, **kwargs)
             else:
                 raise Exception("Can't create an object of unknow type: %s" % typename)
-            for obj in objects:
-                _remove_duplicate(self.parent, obj)
-            return objects
+            # for obj in objects:
+                # _remove_duplicate(self.parent, obj.get('name'))
+            # FIXME: 
+            return [obj for obj in objects if isinstance(obj, haps.HapsObj)]
 
     def __init__(self):
         """Creates bare minimum."""
