@@ -201,6 +201,11 @@ def main():
         print str(counter) + "   " + line
         counter += 1
 
+
+    c = apple.config.get_by_name('base_interactive')
+    print c.get_by_name('pt').get_by_name('max_bounces').get('value')
+
+
     # Higher level should take care of a placement policy (xml schema)
     # to be really useful. How to make it happen? 
     # Callable()s could specifily their details with attributes? 

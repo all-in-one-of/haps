@@ -68,16 +68,38 @@ class HapsObj(defaultdict):
         [self.add(Parameter(parm[0], parm[1])) for parm in parms]
         return self
 
+    def get(self, name):
+        """"""
+        attr = attribute_token+name
+        if attr in self.keys():
+            return self[attr]
+        return None
 
-    def get_element_by_name(self, category, name):
-        """ Recursively search for an item. """
-        if not category in self:
-            for cat in self.key():
-                elements = self[cat]
-        else:
-            for item in self[category]:
-                if name in item:
-                    return item
+    def find(self, name):
+        return get_by_name(name)
+
+    def get_by_name(self, name):
+        """ Search for an item. """
+        def get_child(children, name):
+            attr = attribute_token+'name'
+            for inst in children:
+                    if attr in inst.keys():
+                        if inst[attr] == name:
+                            return inst
+            return None
+
+        for typename, children in self.items():
+            # only children, not attributes
+            if typename.startswith(attribute_token):
+                continue
+            result = get_child(children, name)
+            if result:
+                return result
+    
+
+
+        # We should not have two children of the same name:
+        return None
 
 
     def __repr__(self):
