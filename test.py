@@ -1,25 +1,46 @@
-from haps import *
+from haps_types import *
+from haps import FORMAT_REVISION
 
 """ 
     Experiments with API design for Appleseed for Houdini.
 """
 
+def splitXMLtoWords(xml, whitespace='\n'):
+    return [word.strip() for word in \
+        str(xml).split(whitespace) if word != ""]
+
 def main():
 
+    minimal_project = ['<project format_revision="%i">' % FORMAT_REVISION, '<scene>', 
+        '<assembly name="assembly"/>', '</scene>', '</project>']
+
     # Low level haps.py interface:
-    # Main parts project, scene, assembly
-    # HapsObj1.add(HapsObj2):
-    #       -> adds HapsObj2 into HapsObj1 as xml child node:
     project  = Project()
     scene    = Scene()
     assembly = Assembly('assembly')
     scene.add(assembly)
+    project.add(scene)
+    assert(splitXMLtoWords(str(project)) == minimal_project)
 
-    # Initial arguments are always xml attributes:
-    # First argument is always a name
-    object1  = Object(name='mesh1', file='mesh1.obj')
-    # ...so we can drop it
-    object2  = Object('mesh2', file='mesh2.obj')
+    # __init__ arguments are always XML attributes, first argument is always a name:
+    object1  = Object(name='torus', model='mesh_object').add(Parameter('filename', 'torus.obj'))
+    # ...so we can drop it:
+    object2  = Object('torus', model='mesh_object').add(Parameter('filename', 'torus.obj'))
+
+    assert(str(object1) == str(object2))
+
+    object1 = Object('torus', model='mesh_object').add(Parameter('filename', 'tttt.obj'))
+    # print object1
+    # object1.add(Parameter('filename', 'torus.oj'))
+    obj_inst = Object_Instance('inst_'+'torus', object = 'torus')
+
+    m = (1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16)
+    obj_inst.add(Transform().add(Matrix(m)))
+    print obj_inst
+    print obj_inst.tojson()
+    quit()
+    assembly.add([object1, obj_inst])
+    # print project
 
     # We can add lists of objecs...
     assembly.add([object1, object2]) 
@@ -193,7 +214,6 @@ def main():
     # assert(apple.project.find('configurations').get_by_name('base_interactive')\
     #     .get_by_name('lighting_engine').get('value') == 'ptt')
 
-    print apple.config
 
     apple.Output().insert('Frame', 'beauty', resolution=[1920, 1080])
     assert(apple.project.find('output'))
@@ -218,7 +238,7 @@ def main():
 
     assert(max_bounces == '-1')
     # Debug with line number
-    # counter = 1
+    counter = 1
     # for line in str(apple.project).split('\n'):
     #     print str(counter) + "   " + line
     #     counter += 1

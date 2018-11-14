@@ -20,6 +20,7 @@ def dict2xml(d, root_node=None, level=0, indent=2, attribute_token="@"):
                 children.append(dict2xml(value, key, level=indents+1, indent=indent, attribute_token=attribute_token))
             elif key.startswith(attribute_token):
                 attr = attr + ' ' + key.strip(attribute_token) + '="' + str(value) + '"'
+                # print attr
             elif isinstance(value, list):
                 if isinstance(value[0], list):
                     value = value[0]
