@@ -1,4 +1,5 @@
-def dict2xml(d, root_node=None, level=0, indent=2, attribute_token="@"):
+import collections
+def dict2xml(d, root_node=None, level=0, indent=2, attribute_token="attr:"):
     wrap          =  False if None == root_node or isinstance(d, list) else True
     root          = 'objects' if None == root_node else root_node
     root_singular = root[:-1] if 's' == root[-1] and None == root_node else root
@@ -20,8 +21,7 @@ def dict2xml(d, root_node=None, level=0, indent=2, attribute_token="@"):
                 children.append(dict2xml(value, key, level=indents+1, indent=indent, attribute_token=attribute_token))
             elif key.startswith(attribute_token):
                 attr = attr + ' ' + key.strip(attribute_token) + '="' + str(value) + '"'
-                # print attr
-            elif isinstance(value, list):
+            elif isinstance(value, (list, collections.Sequence)):
                 if isinstance(value[0], list):
                     value = value[0]
                 value = ' '.join(map(str, value))

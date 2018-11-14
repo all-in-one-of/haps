@@ -136,11 +136,11 @@ class Values(HapsVal):
 
 
 class Matrix(HapsVal):
-    pass
-    # identity = [1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1]
-    # def __init__(self, m):
-    #     if m:
-    #         assert(len(m) == 16) 
-    #         super(Matrix, self).__init__(*m)
-    #     if not m:
-    #         super(Matrix, self).__init__(self.identity)
+    identity = (1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1)
+    def __init__(self, m=None):
+        if not m: m = self.identity
+        assert(len(m) == 16)
+        super(Matrix, self).__init__(m)
+
+
+

@@ -19,7 +19,6 @@ class HapsObj(Element):
         #FIXME might want to remove it.
         if isinstance(obj, list) or isinstance(obj, tuple)\
             and type(obj) != HapsVal:
-            print 'Many objects:' + str(obj)
             return self.extend(obj)
         else:
             return self.append(obj)
@@ -34,7 +33,7 @@ class HapsObj(Element):
         from haps_types import Parameter
         assert isinstance(parms, collections.Iterable)
         [self.append(Parameter(parm[0], parm[1])) for parm in parms\
-             if len(parm) == 2 and isinstance(str,parm[0])]
+             if len(parm) == 2 and isinstance(parm[0], str)]
         return self
 
     def get_by_type(self, typename):
@@ -57,9 +56,6 @@ class HapsObj(Element):
 
         return None
 
-    # def tostring(self):
-    #     from xml.etree.ElementTree import tostring
-    #     tostring(self)
 
 
 
@@ -68,4 +64,4 @@ class HapsObj(Element):
 
 
 
-
+ 

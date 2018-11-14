@@ -20,7 +20,7 @@ def main():
     assembly = Assembly('assembly')
     scene.add(assembly)
     project.add(scene)
-    assert(splitXMLtoWords(str(project)) == minimal_project)
+    # assert(splitXMLtoWords(str(project)) == minimal_project)
 
     # __init__ arguments are always XML attributes, first argument is always a name:
     object1  = Object(name='torus', model='mesh_object').add(Parameter('filename', 'torus.obj'))
@@ -29,41 +29,40 @@ def main():
 
     assert(str(object1) == str(object2))
 
-    object1 = Object('torus', model='mesh_object').add(Parameter('filename', 'tttt.obj'))
-    # print object1
-    # object1.add(Parameter('filename', 'torus.oj'))
-    obj_inst = Object_Instance('inst_'+'torus', object = 'torus')
+    # Add objects, its instance and defaulf transform:
+    object1    = Object('box', model='mesh_object').add_parms([('filename', 'box.obj')])
+    obj1_inst1 = Object_Instance('inst_'+'torus', object='box').add(Transform().add(Matrix()))
+    assembly.add([object1, obj1_inst1])
 
-    m = (1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16)
-    obj_inst.add(Transform().add(Matrix(m)))
-    print obj_inst
-    print obj_inst.tojson()
-    quit()
-    assembly.add([object1, obj_inst])
-    # print project
+    assert(assembly.find('object') and assembly.find('object_instance'))
+    assert(assembly.get_by_name('box') and assembly.get_by_name('inst_torus'))
 
-    # We can add lists of objecs...
-    assembly.add([object1, object2]) 
+    # Transforms have broken xml encoder which works corrently only in recursive case (above not bellow)
+    ident = (1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1)
+    assert(str(Transform().add(Matrix())) == str(Transform().add(Matrix(ident))))
+
 
     # Instances of objects NOTE: we can reference objects 
-    # (as opposed to their names) in args, albeit it's buggy atm
-    obj_inst1 = Object_Instance('obj_inst1', object='mesh1')
-    obj_inst2 = Object_Instance('obj_inst2', object=object1)
-    # Default transform with ident matrix at time 0.0:
-    obj_inst1.add(Transform().add(Matrix()))
-    # or mock something else  (at time .5)
-    obj_inst2.add(Transform(.5).add(Matrix(1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16)))
+    # (as opposed to their names) in arguments
+    obj_inst1 = Object_Instance('obj_inst1', object='box')
+    obj_inst2 = Object_Instance('obj_inst1', object=object1)
+    assert(str(obj_inst1) == str(obj_inst2))
 
-    assembly.add([obj_inst1, obj_inst2])
 
     # Assembly spaggeti addition (ugly but handy)
-    assembly.add(Color('red').add(Alpha(1)).add(
+    assembly.add(Color('red').add(Alpha([1])).add(
                 Parameter('color_space', 'sRGB')).add(
                     Values([0.1, 1, 2.0])))
+
+    assert(assembly.find('color').get('name') == 'red')
+    assert(str(assembly.find('color').find('alpha')) == '1')
+    assert(assembly.find('color').find('values').data == [0.1, 1, 2.0])
 
     # Assemblies also seem to be instanceable
     asmb_inst1 = Assembly_Instance('asm1', assembly=assembly).add(Transform().add(Matrix()))
     scene.add(asmb_inst1)
+    assert(scene.find('assembly_instance'))
+
 
     # Row camera:
     scene.add(Camera("camera1", model="pinhole_camera").add(
@@ -71,6 +70,13 @@ def main():
             Look_At(origin=[0,0,0], target=[1,1,1], up=[0,1,0]))
         )
     )
+    # Queries and deletion
+    camera = scene.get_by_name('camera1')
+    assert(camera.find('transform').find('look_at').get('up') == "0 1 0")
+    look_at = camera.find('transform').find('look_at')
+    camera.find('transform').remove(look_at)
+    camera.find('transform').add(Look_At(origin=[1,1,1], target=[1,1,1], up=[0,1,0]))
+    assert(len(camera.find('transform').findall('look_at')) == 1)
 
     # Row Colours:
     spectral = Color('green')
@@ -90,7 +96,6 @@ def main():
     # Env + env_shader + Edf
     scene.add(Environment('env', environment_shader='env_shader')).add(
         Environment_Shader('env_shader', edf='edf')).add(Edf('edf', model='cone_edf'))
-    project.add(scene)
 
     # Frame
     frame = Frame('beauty').add(
@@ -100,6 +105,7 @@ def main():
 
     # is a part of output section:
     project.add(Output().add(frame))
+
 
     # There is config and number of configs inside:
     # Also we could get rid of Parameters (as some
@@ -128,7 +134,7 @@ def main():
     project.add(config)
     # We're done:
     # print project
-    xml = project.toxml()
+    xml = project.tostring()
     # with open(filename, 'w') as file: file.write(xml) etc...
 
 
@@ -142,6 +148,7 @@ def main():
     # (1) happleseend.Callable() returns HapsObj
     camera = happleseed.ThinLensCamera('renderCam')
     scene.add(camera)
+    quit()
 
     # (2) maybe with explicite factory (does it bring much to the table?)
     scene = Scene()

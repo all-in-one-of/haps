@@ -2,49 +2,26 @@ import collections, types
 from collections import defaultdict
 
 class HapsVal(collections.Sequence):
-    data = []
+    """HapsVal is a special case in XML world. This is non attribute / numeric varible 
+        text values XML tag.
+    """
     def __init__(self, values):
+        self.data = []
         super(HapsVal, self).__init__()
+        for v in values: self.data.append(v)
     def __getitem__(self, i):
         return self.data[i]
     def __len__(self):
         return len(self.data)
     def __repr__(self):
         return ' '.join(map(str, self.data))
-    def __dict__(self):
-        return {'value': str(self.data)}
-
-
-    # pass
-    # def __init__(self, data):
-    #    self.data = list(data)
-
-    # def next(self):
-    #     if not self.data:
-    #        raise StopIteration
-    #     return self.data.pop()
-
-    # def __iter__(self):
-    #     return self
-    # data = []
-    # def __init__(self, *args):
-    #     assert(args)
-    #     for item in args:
-    #         self.data.append(item)
-    # def __iter__(self):
-    #     for item in self.data:
-    #         yield item
-    # def __getitem__(self, idx):
-    #     return self.data[idx]
-    # def __len__(self):
-    #     return len(self.data)
-
 
 class Element(defaultdict):
     """Minimal implementation of xml.ElementTree API
        based on Python native dictionary.
     """
-    attribute_token = 'attr:'
+    #FIXME: Changing this causes a bug (some of the attribs names are swollowed)
+    attribute_token = '@'
 
     def __init__(self, name=None, **kwargs):
         """Init object with attribs from kwargs."""
@@ -71,8 +48,19 @@ class Element(defaultdict):
             for child in children:
                 yield child 
 
+    def __repr__(self):
+        """ Major functionality of this class. Using base clase to tostring() method
+            represents itself as a XML node / document.
+        """
+        root=type(self).__name__.lower()
+        return self.tostring(root=root)
+
     def append(self, obj):
-        """ Add child element to self. """
+        """Add child element to current parent.
+
+        :parm:   obj is an object of the same type as self.
+        :return: self 
+        """
         def _add_value(v):
             typename = type(obj).__name__.lower()
             self[typename] = v
@@ -93,7 +81,11 @@ class Element(defaultdict):
         return self
 
     def extend(self, objs):
-        """Extends element with collection of subelements."""
+        """Extends element with collection of subelements.
+
+        :parm objs:   list of elements iof type HapsObj to be added as children. 
+        :returns:      self
+        """
         [self.append(x) for x in objs]
         return self
 
@@ -112,16 +104,24 @@ class Element(defaultdict):
         return None
 
     def find(self, tag):
-        """Find first child element of type name (tag)."""
+        """Find first child element of type name/tag. Only 
+        first element of a type 'tag' will be returend. Use findall
+        to search for multiply elements of the 'tag'.
+
+        :parm tag: the name of the type of element type to be returned. """
         for typename, children in self.items():
             # only children, not attributes
             if not typename.startswith(self.attribute_token)\
                 and typename == tag:
+                # This is special case for HpasVal TODO: Make it more natural
+                if  type(self[typename][0]) in (type(1), type(1.0)):
+                    return self[typename]
                 return self[typename][0]
         return None
 
     def findall(self, tag):
-        """Finds all children elements of a given type (tag)."""
+        """Finds all children elements of a given type (tag).
+        :parm tag: the name of the type of elements to be returned."""
         for typename, children in self.items():
             # only children, not attributes
             if not typename.startswith(self.attribute_token)\
@@ -143,9 +143,6 @@ class Element(defaultdict):
     def set(self, key, value):
         self.__setattr__(key, value)
 
-    def __repr__(self):
-        root=type(self).__name__.lower()
-        return self.tostring(root=root)
 
     def tostring(self, pretty_print=True, indent=2, root='project'):
         #TODO This has to be rewritten...
@@ -156,3 +153,5 @@ class Element(defaultdict):
     def tojson(self, indent=2):
         from json import dumps
         return dumps(self, indent=indent)
+
+
