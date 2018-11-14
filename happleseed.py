@@ -56,9 +56,7 @@ class AppleSeed(object):
                 objects += getattr(haps, typename)(name, **kwargs)
             else:
                 raise Exception("Can't create an object of unknow type: %s" % typename)
-            # for obj in objects:
-                # _remove_duplicate(self.parent, obj.get('name'))
-            # FIXME: 
+            # FIXME: why non happies end up here?
             return [obj for obj in objects if isinstance(obj, haps.HapsObj)]
 
     def __init__(self):

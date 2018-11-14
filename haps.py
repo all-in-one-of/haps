@@ -68,17 +68,33 @@ class HapsObj(defaultdict):
         [self.add(Parameter(parm[0], parm[1])) for parm in parms]
         return self
 
-    def get(self, name):
+    def get(self, name, raise_on_fail=True):
         """Get local attribute 'name'."""
         attr = attribute_token+name
         if attr in self.keys():
             return self[attr]
-        else:
-            raise Exception('Attribute "%s" not present' % name)
-        return
+        elif raise_on_fail:
+            raise Exception('Attribute "%s" not present on object %s' % (name, self))
+        return None
 
-    def find(self, name):
-        return self.get_by_name(name)
+    def find(self, tag):
+        """Find first child element of type name (tag)."""
+        for typename, children in self.items():
+            # only children, not attributes
+            if not typename.startswith(attribute_token)\
+                and typename == tag:
+                return self[typename][0]
+        return None
+
+    def findall(self, tag):
+        """Finds all children elements of a given type (tag)."""
+        for typename, children in self.items():
+            # only children, not attributes
+            if not typename.startswith(attribute_token)\
+                and typename == tag:
+                return self[typename]
+        return None
+
 
     def remove(self, obj):
         # obj = self.find(obj.get(name))
@@ -87,23 +103,39 @@ class HapsObj(defaultdict):
         index = self[typename].index(obj)
         return self[typename].pop(index)
 
-    def get_by_name(self, name):
-        """ Search for an item. """
-        def get_child(children, name):
-            attr = attribute_token+'name'
-            for inst in children:
-                    if attr in inst.keys():
-                        if inst[attr] == name:
-                            return inst
-            return None
 
-        for typename, children in self.items():
-            # only children, not attributes
-            if typename.startswith(attribute_token):
-                continue
-            result = get_child(children, name)
-            if result: 
-                return result
+    def get_by_type(self, typename):
+        assert(typename in self.keys())
+        return self[typename]
+
+
+    def keys(self):
+        return [key for key in super(HapsObj,self).keys() \
+            if key.startswith(attribute_token)]
+
+
+    def set(self, key, value):
+        self.__setattr__(key, value)
+
+
+    def get_by_name(self, name, typename=None):
+        """ Search for an item named 'name'.
+            Optional 'typename' scopes the search. 
+        """
+        if typename:
+            children = self.findall(typename)
+            for child in children:
+                if child.get('name') == name:
+                    print 'found child by name: ' + child.get('name')
+                    return child
+        else: 
+            for typename, children in self.items():
+                if not typename.startswith(attribute_token):               
+                    collect = [child for child in self[typename] \
+                        if child.get('name') == name]
+                    if collect:
+                        return collect[0]
+
         return None
 
 

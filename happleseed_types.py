@@ -3,6 +3,7 @@ import collections
 import types
 
 def update_parameters(obj, **kwargs):
+    #FIXME make etree compilant
     token = haps.attribute_token
     keys = [parm[token+'name'] for parm in obj['parameter']]
     for key, value in kwargs.items():
@@ -58,9 +59,9 @@ def Frame(name, **kwargs):
     frame = haps.Frame(name)
     frame.add_parms([
         ("camera", None),
-        ("resolution", [1280, 720]),  
-        ("crop_window", None),
-        ("tile_size" ,  16), 
+        ("resolution", "1280 720"),  
+        ("crop_window", "0 0 1280 720"),
+        ("tile_size" ,  "16 16"), 
         ("filter",  'blackman-harris'), 
         ("filter_size", 1.5 )])
     frame = update_parameters(frame, **kwargs)

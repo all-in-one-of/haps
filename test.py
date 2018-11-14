@@ -170,6 +170,7 @@ def main():
     apple.factory('scene').create('Environment', 'preetham_env', turbidity=2.0)
     # len(objects) == 3
     objects = happleseed.Environment('preetham_env', turbidity=2.0) 
+    assert(len(objects) == 3)
     # This for example is not valided with Appleseed schema: 
     # apple.factory('scene').create('MeshObject'))
     mesh = apple.factory().create('MeshObject','mesh1', filename="mesh.obj")
@@ -181,23 +182,46 @@ def main():
     apple.Assembly().add('MeshObject', 'torus', filename='torus.obj')
     apple.scene.add(Assembly('new_assembly'))
     apple.scene.add(Assembly_Instance('na_inst', assembly='new_assembly'))
-    apple.Assembly('new_assembly').add('MeshObject', 'torus', filename='torus.obj')
+    apple.Assembly('new_assembly').add('MeshObject', 'torus2', filename='torus.obj')
     apple.Config().insert('InteractiveConfiguration', 'base_interactive')
+
     # Replace one element:
-    apple.Config('base_interactive').insert('Parameter', 'lighting_engine', value='pt')
+    apple.Config('base_interactive').insert('Parameter', 'lighting_engine', value='nonsense')
+    # assert(apple.project.find('configurations').get_by_name('base_interactive')\
+    #     .get_by_name('lighting_engine').get('value') == 'nonsense')
+    # apple.Config('base_interactive').insert('Parameter', 'lighting_engine', value='ptt')
+    # assert(apple.project.find('configurations').get_by_name('base_interactive')\
+    #     .get_by_name('lighting_engine').get('value') == 'ptt')
+
+    print apple.config
+
     apple.Output().insert('Frame', 'beauty', resolution=[1920, 1080])
+    assert(apple.project.find('output'))
+    assert(apple.project.find('output').get_by_name('beauty')\
+        .get_by_name('resolution').get('value') == '1920 1080')
+
+
     apple.Assembly().insert('DisneyMaterial', 'some_disney_material', base_color=[1,0,0])
+    assert(apple.assembly.find('material'))
+    assert(apple.assembly.find('material').get('name') == 'some_disney_material')
+    assert(apple.assembly.get_by_name('some_disney_material').get('model')  == 'disney_material')
 
+    with open('test.appleseed', 'w') as file:
+        file.write(apple.project.toxml())
+        file.close()
 
+    # How to get to subelements:
+    max_bounces = apple.config.get_by_name('base_interactive')\
+        .get_by_name('pt')\
+        .get_by_name('max_bounces')\
+        .get('value')
+
+    assert(max_bounces == '-1')
     # Debug with line number
-    counter = 1
-    for line in str(apple.project).split('\n'):
-        print str(counter) + "   " + line
-        counter += 1
-
-
-    c = apple.config.get_by_name('base_interactive')
-    print c.get_by_name('pt').get_by_name('max_bounces').get('value')
+    # counter = 1
+    # for line in str(apple.project).split('\n'):
+    #     print str(counter) + "   " + line
+    #     counter += 1
 
 
     # Higher level should take care of a placement policy (xml schema)
