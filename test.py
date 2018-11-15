@@ -20,7 +20,7 @@ def main():
     assembly = Assembly('assembly')
     scene.add(assembly)
     project.add(scene)
-    # assert(splitXMLtoWords(str(project)) == minimal_project)
+    assert(splitXMLtoWords(str(project)) == minimal_project)
 
     # __init__ arguments are always XML attributes, first argument is always a name:
     object1  = Object(name='torus', model='mesh_object').add(Parameter('filename', 'torus.obj'))
@@ -70,6 +70,7 @@ def main():
             Look_At(origin=[0,0,0], target=[1,1,1], up=[0,1,0]))
         )
     )
+
     # Queries and deletion
     camera = scene.get_by_name('camera1')
     assert(camera.find('transform').find('look_at').get('up') == "0 1 0")
@@ -97,6 +98,8 @@ def main():
     scene.add(Environment('env', environment_shader='env_shader')).add(
         Environment_Shader('env_shader', edf='edf')).add(Edf('edf', model='cone_edf'))
 
+    assert(scene.find('bsdf') and scene.find('environment') and scene.find('edf'))
+
     # Frame
     frame = Frame('beauty').add(
         Parameter('camera', 'camera')).add(
@@ -105,7 +108,6 @@ def main():
 
     # is a part of output section:
     project.add(Output().add(frame))
-
 
     # There is config and number of configs inside:
     # Also we could get rid of Parameters (as some
@@ -116,6 +118,8 @@ def main():
         ('tile_renderer', 'generic'),
         ('pixel_renderer', 'uniform')]))
 
+    assert(len(config.find('configuration').findall('parameter')) == 3)
+    assert(len(config.get_by_name('base_interactive').findall('parameter')) == 3)
 
     # Even more nested nodes:
     config.add(Configuration('base_final').add([
@@ -130,79 +134,78 @@ def main():
         ])
     )
 
+    assert(len(config.get_by_name('base_final')\
+        .get_by_name('light_engine')\
+        .find('parameters').\
+        findall('parameter') ) == 2)
+
     #
     project.add(config)
     # We're done:
     # print project
     xml = project.tostring()
-    # with open(filename, 'w') as file: file.write(xml) etc...
+
+    # with open(filename, 'w') as file: 
+    #     file.write(xml) etc...
 
 
     # Higher level interface (happleseed.py)
     # TODO: delegate candidates for higher life existance: 
     # cameras, lights, configs, spectral colors?
     import happleseed
-    project = Project()
     scene   = Scene()
+    project = Project().add(scene)
+
+    # FIXME Scene won't be found unless it's not empty (see bellow
+    # assert(project.find('scene')) 
+    # This works though
+    assert(project.findall('scene'))
+    assert(len(project.findall('scene')) == 1)
 
     # (1) happleseend.Callable() returns HapsObj
-    camera = happleseed.ThinLensCamera('renderCam', film_dimensions='0.2 .3')
+    camera = happleseed.ThinLensCamera('renderCam', film_dimensions=[0.2, .3])
     scene.add(camera)
-    print scene
-    quit()
+    # This works with items added. 
+    assert(project.find('scene')) 
 
     # (2) maybe with explicite factory (does it bring much to the table?)
+    # We need hierarchy insertion constrain
     scene = Scene()
     scene.add(happleseed.Factory('Frame','beauty', 
         parms=(('resolution' ,[1920, 1080]),), 
         camera='renderCam2'))
     scene.add(happleseed.Factory('Camera', 'renderCam2', 
         parms=(('aspect_ratio',1), ), model="pinhole_camera"))
-    # print scene
+
+    assert(scene.find('camera'))
+    assert(scene.find('frame').get_by_name('resolution').get('value') == [1920, 1080])
 
     # (3) or more object oriented?
-    # (1), (2) and (3) could and perhpas should be used together:
-    # We take care of complete creation by ourselfs:
     apple = happleseed.AppleSeed()
     apple.scene = Scene()
-    apple.scene.add(happleseed.ThinLensCamera('renderCam'))
-    apple.scene.add(happleseed.Factory('Frame','beauty', 
-        parms=(('resolution' ,[1920, 1080]),), 
-        camera='renderCam'))
 
-    # we don't bother
-    apple.project.add(Configurations().add(Configuration("final").add_parms([
-        ('frame_renderer', 'generic'), 
-        ('tile_renderer', 'generic'),
-        ('pixel_renderer', 'uniform')])))
-    
-    # Some mixed ideas
-    # point light is added directly to assembly
-    apple.assembly = Assembly('assembly')
-    apple.assembly.add(Light('point_light').add(Transform().add(Matrix())))
-    # assembly to scene likewise
-    apple.scene.add(Assembly('assembly2'))
-    #
-    apple.scene['assembly'][0].add(Light('point_light'))
-    #
-    assembly = apple.scene['assembly'][0] # get default one
-    #
-    # How about create context with parent, is it general? Probably not.
-    apple = happleseed.AppleSeed()  
-    apple.scene = Scene()
+    # How about create context with parent, is it general? 
     apple.assembly = Assembly('assembly')
     apple.project.add(apple.scene)
     apple.scene.add(apple.assembly)  
+
+    assert(splitXMLtoWords(str(apple.project)) == minimal_project)
+
+    #  via factory() method:
     # by default first assembly is a scene:
-    apple.factory().create('Light', 'lamp', model='point_light')
+    light = apple.factory('scene').create('Light', 'lamp', model='point_light')
+    print light
     # This addes three objects:
-    apple.factory('scene').create('Environment', 'preetham_env', turbidity=2.0)
+    env = apple.factory('scene').create('Environment', 'preetham_env', turbidity=2.0)
+    # print env
     # len(objects) == 3
     objects = happleseed.Environment('preetham_env', turbidity=2.0) 
     assert(len(objects) == 3)
     # This for example is not valided with Appleseed schema: 
     # apple.factory('scene').create('MeshObject'))
     mesh = apple.factory().create('MeshObject','mesh1', filename="mesh.obj")
+
+    quit()
 
     # Yet another way
     apple = happleseed.AppleSeed()
