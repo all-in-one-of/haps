@@ -8,7 +8,8 @@ def update_parameters(obj, **kwargs):
     containing many parameters. TODO: we might move it into some object.
 
     :parm obj:      HapsObj to be updated
-    :parm **kwargs: usual Python kwargs arguments like: name_of_parm=new_value
+    :parm **kwargs: Python **kwargs arguments: name_of_parm=new_value
+    :returns:       Modified object
     """
     for key, value in kwargs.items():
         parm = obj.get_by_name(key)
