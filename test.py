@@ -146,8 +146,9 @@ def main():
     scene   = Scene()
 
     # (1) happleseend.Callable() returns HapsObj
-    camera = happleseed.ThinLensCamera('renderCam')
+    camera = happleseed.ThinLensCamera('renderCam', film_dimensions='0.2 .3')
     scene.add(camera)
+    print scene
     quit()
 
     # (2) maybe with explicite factory (does it bring much to the table?)

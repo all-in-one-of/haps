@@ -3,24 +3,27 @@ import collections
 import types
 
 def update_parameters(obj, **kwargs):
-    #FIXME make etree compilant
-    token = haps.attribute_token
-    keys = [parm[token+'name'] for parm in obj['parameter']]
+    """Update object's parmaters with provided **kwargs.
+    This is a helper function usually called by objects
+    containing many parameters. TODO: we might move it into some object.
+
+    :parm obj:      HapsObj to be updated
+    :parm **kwargs: usual Python kwargs arguments like: name_of_parm=new_value
+    """
     for key, value in kwargs.items():
-        if key in keys:
-            parm = obj['parameter'][keys.index(key)]
-            if isinstance(value, collections.Iterable) and \
-            not  isinstance(value, types.StringTypes):
-                value = ' '.join(map(str, value))
-            parm[token+'value'] = value
+        parm = obj.get_by_name(key)
+        if isinstance(value, collections.Iterable) and \
+        not  isinstance(value, types.StringTypes):
+            value = ' '.join(map(str, value))
+        parm.set('value', value)
     return obj
 
 def ThinLensCamera(name, **kwargs):
     camera = haps.Camera(name=name, model='thinlens_camera')
     camera.add_parms([
-        ("shutter_open_time", 0.0),
+        ("shutter_open_time", 0.0001),
         ("shutter_close_time",   1.0),
-        ("film_dimensions", None), # FIXME:
+        ("film_dimensions", [0,0]), # FIXME:
         ("film_width", 1280), 
         ("film_height", 720),
         ("aspect_ratio", 1),
