@@ -1,20 +1,6 @@
 import collections, types
 from collections import defaultdict
 
-class HapsVal(collections.Sequence):
-    """HapsVal is a special case in XML world. This is non attribute / numeric varible 
-        text values XML tag.
-    """
-    def __init__(self, values):
-        self.data = []
-        super(HapsVal, self).__init__()
-        for v in values: self.data.append(v)
-    def __getitem__(self, i):
-        return self.data[i]
-    def __len__(self):
-        return len(self.data)
-    def __repr__(self):
-        return ' '.join(map(str, self.data))
 
 class Element(defaultdict):
     """Minimal implementation of xml.ElementTree API
@@ -61,6 +47,9 @@ class Element(defaultdict):
         :parm:   obj is an object of the same type as self.
         :return: self 
         """
+        #FIXME:
+        from haps_type import HapsVal
+
         def _add_value(v):
             typename = type(obj).__name__.lower()
             self[typename] = v

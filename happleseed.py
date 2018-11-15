@@ -1,6 +1,4 @@
 import haps
-from happleseed_types import *
-
 
 def Factory(typename,  name, parms=(), **kwargs):
     # FIXME: tuples in parm's values aren't collaped to strings (?)
@@ -51,9 +49,12 @@ class AppleSeed(object):
             thismodule = modules[__name__]
             objects = []
             if hasattr(thismodule, typename):
+                print 'from this module %s' % typename
                 objects = list(getattr(thismodule, typename)(name, **kwargs))
             elif hasattr(haps, typename):
+                print 'from haps %s' % typename
                 objects += getattr(haps, typename)(name, **kwargs)
+                print objects
             else:
                 raise Exception("Can't create an object of unknow type: %s" % typename)
             # FIXME: why non happies end up here?

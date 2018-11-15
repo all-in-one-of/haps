@@ -1,4 +1,4 @@
-import haps_types as haps
+import haps
 import collections
 import types
 
