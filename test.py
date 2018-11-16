@@ -133,8 +133,8 @@ def main():
     #
     project.add(config)
     # We're done:
-    # print project
     xml = project.tostring()
+    # print xml
     # with open(filename, 'w') as file: file.write(xml) etc...
 
 
@@ -146,19 +146,30 @@ def main():
     scene   = Scene()
 
     # (1) happleseend.Callable() returns HapsObj
-    camera = happleseed.ThinLensCamera('renderCam', film_dimensions='0.2 .3')
-    scene.add(camera)
-    print scene
-    quit()
+    camera1 = happleseed.ThinLensCamera('camera', film_dimensions='0.2 .3')
+    camera2 = happleseed.ThinLensCamera('camera')
+    assert(str(camera2) != str(camera1))
+    # TODO: Should we check for duplicates?
+    scene.add([camera1, camera2])
+
+    assert(len(scene.findall('camera')) == 2)
+
+    # Some happleseed method may return multiply objects: 
+    objects = happleseed.Environment('preetham_env', turbidity=2.0) 
+    assert(len(objects) == 3)
 
     # (2) maybe with explicite factory (does it bring much to the table?)
     scene = Scene()
     scene.add(happleseed.Factory('Frame','beauty', 
-        parms=(('resolution' ,[1920, 1080]),), 
+        parms=(('resolution' ,[1920, 1080]),), #FIXME: not converted to string
         camera='renderCam2'))
     scene.add(happleseed.Factory('Camera', 'renderCam2', 
         parms=(('aspect_ratio',1), ), model="pinhole_camera"))
-    # print scene
+    
+    assert(scene.find("frame"))
+    assert(scene.find("camera"))
+    assert(scene.find('camera').get('model') == 'pinhole_camera')
+    assert(scene.find('frame').get_by_name('resolution').get('value') == [1920, 1080]) # This is correct, but bug is there 
 
     # (3) or more object oriented?
     # (1), (2) and (3) could and perhpas should be used together:
@@ -170,42 +181,31 @@ def main():
         parms=(('resolution' ,[1920, 1080]),), 
         camera='renderCam'))
 
+    assert(apple.scene.find("frame"))
+    assert(apple.scene.find("camera"))
+
     # we don't bother
     apple.project.add(Configurations().add(Configuration("final").add_parms([
         ('frame_renderer', 'generic'), 
         ('tile_renderer', 'generic'),
         ('pixel_renderer', 'uniform')])))
+
+    assert(apple.project.find('configurations'))
+    assert(apple.project.find('configurations').get_by_name('final')\
+        .get_by_name('frame_renderer').get('value') == 'generic')
+
     
-    # Some mixed ideas
-    # point light is added directly to assembly
-    apple.assembly = Assembly('assembly')
-    apple.assembly.add(Light('point_light').add(Transform().add(Matrix())))
-    # assembly to scene likewise
-    apple.scene.add(Assembly('assembly2'))
-    #
-    apple.scene['assembly'][0].add(Light('point_light'))
-    #
-    assembly = apple.scene['assembly'][0] # get default one
-    #
-    # How about create context with parent, is it general? Probably not.
-    apple = happleseed.AppleSeed()  
-    apple.scene = Scene()
-    apple.assembly = Assembly('assembly')
-    apple.project.add(apple.scene)
-    apple.scene.add(apple.assembly)  
-    # by default first assembly is a scene:
-    apple.factory().create('Light', 'lamp', model='point_light')
-    # This addes three objects:
-    apple.factory('scene').create('Environment', 'preetham_env', turbidity=2.0)
-    # len(objects) == 3
-    objects = happleseed.Environment('preetham_env', turbidity=2.0) 
-    assert(len(objects) == 3)
-    # This for example is not valided with Appleseed schema: 
-    # apple.factory('scene').create('MeshObject'))
-    mesh = apple.factory().create('MeshObject','mesh1', filename="mesh.obj")
+   
 
     # Yet another way
     apple = happleseed.AppleSeed()
+    apple.Scene()
+    apple.Assembly()
+    print apple.project
+    assert(splitXMLtoWords(str(apple.project)) == minimal_project)
+    quit()
+
+    
     apple.Scene().add('Environment', 'preetham_env', turbidity=2.0)
     apple.Assembly('assembly').add('Light', 'sun', model='point_light')
     apple.Assembly().add('MeshObject', 'torus', filename='torus.obj')

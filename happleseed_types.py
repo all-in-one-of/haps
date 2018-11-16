@@ -37,7 +37,7 @@ def ThinLensCamera(name, **kwargs):
         ("diaphragm_map",  ''),
         ("near_z",  -0.001)])
     camera = update_parameters(camera, **kwargs)
-    return camera, None
+    return camera
 
 
 def PinholeCamera(name, **kwargs):
