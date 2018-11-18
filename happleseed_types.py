@@ -1,23 +1,4 @@
 import haps
-import collections
-import types
-
-def update_parameters(obj, **kwargs):
-    """Update object's parmaters with provided **kwargs.
-    This is a helper function usually called by objects
-    containing many parameters. TODO: we might move it into some object.
-
-    :parm obj:      HapsObj to be updated
-    :parm **kwargs: Python **kwargs arguments: name_of_parm=new_value
-    :returns:       Modified object
-    """
-    for key, value in kwargs.items():
-        parm = obj.get_by_name(key)
-        if isinstance(value, collections.Iterable) and \
-        not  isinstance(value, types.StringTypes):
-            value = ' '.join(map(str, value))
-        parm.set('value', value)
-    return obj
 
 def ThinLensCamera(name, **kwargs):
     camera = haps.Camera(name=name, model='thinlens_camera')
@@ -37,8 +18,8 @@ def ThinLensCamera(name, **kwargs):
         ("diaphragm_tilt_angle",  0.0),
         ("diaphragm_map",  ''),
         ("near_z",  -0.001)])
-    camera = update_parameters(camera, **kwargs)
-    return camera, None
+    camera = haps.update_parameters(camera, **kwargs)
+    return camera
 
 
 def PinholeCamera(name, **kwargs):
@@ -53,7 +34,7 @@ def PinholeCamera(name, **kwargs):
         ("focal_length", 40), 
         ("horizontal_fov", 45),
         ("near_z",  -0.001)])
-    camera = update_parameters(camera, **kwargs)
+    camera = haps.update_parameters(camera, **kwargs)
     return camera, None
 
 # TODO: make choices predefined (enumarator style)
@@ -68,7 +49,7 @@ def Frame(name, **kwargs):
         ("tile_size" ,  "16 16"), 
         ("filter",  'blackman-harris'), 
         ("filter_size", 1.5 )])
-    frame = update_parameters(frame, **kwargs)
+    frame = haps.update_parameters(frame, **kwargs)
 
     return frame, None
 
@@ -82,7 +63,7 @@ def Frame(name, **kwargs):
 #             ("radiance_multiplier" , 1.0),
 #             ("turbidity" , 1.0)
 #         ])
-#     light = update_parameters(light, **kwargs)
+#     light = haps.update_parameters(light, **kwargs)
 #     edf, tmp = EnvironmentEdf('environment_edf')
 #     return light, edf 
 
@@ -109,7 +90,7 @@ def EnvironmentEdf(name, **kwargs):
             ("turbidity" ,"1.0" ),
             ("turbidity_multiplier" ,"1.0" ),
         ])
-    env = update_parameters(env, **kwargs)
+    env = haps.update_parameters(env, **kwargs)
     return env, None
 
 
@@ -119,7 +100,7 @@ def SpectralColor(name, values=[1,1,1], alpha=1.0, **kwargs):
         ('color_space', 'spectral'),
         ('wavelength_range', '400 700'),])
     color.add(haps.Values(values).add(haps.Alpha([alpha])))
-    color = update_parameters(color, **kwargs)
+    color = haps.update_parameters(color, **kwargs)
     return color, None
 
 
@@ -158,6 +139,7 @@ def PhysicalSurfaceShader(name, lighting_samples=1):
     shader.add(haps.Parameter('lighting_samples', lighting_samples))
     return shader, None
 
+
 def DisneyMaterialLayer(name, layer_number, **kwargs):
     parms = haps.Parameters(name)
     parms.add_parms([
@@ -177,8 +159,9 @@ def DisneyMaterialLayer(name, layer_number, **kwargs):
             ("specular_tint", "0.0"),
             ("subsurface", "0.0"),
         ])
-    parms = update_parameters(parms, **kwargs)
+    parms = haps.update_parameters(parms, **kwargs)
     return parms, None
+
 
 def DisneyMaterial(name, layers=1, **kwargs):
     shader   = PhysicalSurfaceShader('surface_shader')
@@ -190,8 +173,9 @@ def DisneyMaterial(name, layers=1, **kwargs):
                 ("normal_map_up", "z"),
                 ("surface_shader", "surface_shader")
         ])
-    material = update_parameters(material, **kwargs)
+    material = haps.update_parameters(material, **kwargs)
     for layer in range(1, layers+1):
         name = 'layer%i' % layer
         material.add(DisneyMaterialLayer(name, layer))
     return shader, material
+

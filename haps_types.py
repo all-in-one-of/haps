@@ -45,7 +45,7 @@ class HapsObj(Element):
            :parm parms: List of tuples [(str name, str value), (...,...)]
            :returns:    self
         """
-        from haps_types import Parameter
+        from haps import Parameter
         assert isinstance(parms, collections.Iterable)
         [self.append(Parameter(parm[0], parm[1])) for parm in parms\
              if len(parm) == 2 and isinstance(parm[0], str)]

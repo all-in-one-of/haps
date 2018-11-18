@@ -48,7 +48,7 @@ class Element(defaultdict):
         :return: self 
         """
         #FIXME:
-        from haps_type import HapsVal
+        from haps_types import HapsVal
 
         def _add_value(v):
             typename = type(obj).__name__.lower()

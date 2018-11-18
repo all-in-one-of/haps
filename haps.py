@@ -1,5 +1,26 @@
 from haps_types import HapsObj, HapsVal, FORMAT_REVISION
+import collections
+import types
+    
 
+def update_parameters(obj, **kwargs):
+    """Update object's parmaters with provided **kwargs.
+    This is a helper function usually called by objects
+    containing many parameters. TODO: we might move it into some object.
+
+    :parm obj:      HapsObj to be updated
+    :parm **kwargs: Python **kwargs arguments: name_of_parm=new_value
+    :returns:       Modified object
+    """
+    for key, value in kwargs.items():
+        parm = obj.get_by_name(key)
+        if isinstance(value, collections.Iterable) and \
+        not  isinstance(value, types.StringTypes):
+            value = ' '.join(map(str, value))
+        parm.set('value', value)
+    return obj
+
+    
 
 class Project(HapsObj):
     _children = []

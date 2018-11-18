@@ -1,5 +1,5 @@
-from haps_types import *
-from haps import FORMAT_REVISION
+from haps import *
+from haps_types import FORMAT_REVISION
 
 """ 
     Experiments with API design for Appleseed for Houdini.
@@ -142,11 +142,9 @@ def main():
     #
     project.add(config)
     # We're done:
-    # print project
     xml = project.tostring()
-
-    # with open(filename, 'w') as file: 
-    #     file.write(xml) etc...
+    # print xml
+    # with open(filename, 'w') as file: file.write(xml) etc...
 
 
     # Higher level interface (happleseed.py)
@@ -162,53 +160,56 @@ def main():
     assert(project.findall('scene'))
     assert(len(project.findall('scene')) == 1)
 
-    # (1) happleseend.Callable() returns HapsObj
-    camera = happleseed.ThinLensCamera('renderCam', film_dimensions=[0.2, .3])
-    scene.add(camera)
-    # This works with items added. 
-    assert(project.find('scene')) 
+    # (1) happleseend_types.Callable() returns HapsObj (possible more than one)
+    import happleseed_types
+    camera1 = happleseed_types.ThinLensCamera('camera', film_dimensions='0.2 .3')
+    camera2 = happleseed_types.ThinLensCamera('camera')
+    assert(str(camera2) != str(camera1))
+    # TODO: Should we check for duplicates?
+    scene.add([camera1, camera2])
+
+    assert(len(scene.findall('camera')) == 2)
+
+    # Some happleseed method may return multiply objects: 
+    objects = happleseed_types.Environment('preetham_env', turbidity=2.0) 
+    assert(len(objects) == 3)
 
     # (2) maybe with explicite factory (does it bring much to the table?)
-    # We need hierarchy insertion constrain
+    # better since we have hide objects inside happleseed_types
     scene = Scene()
     scene.add(happleseed.Factory('Frame','beauty', 
-        parms=(('resolution' ,[1920, 1080]),), 
+        parms=(('resolution' ,[1920, 1080]),), #FIXME: not converted to string
         camera='renderCam2'))
     scene.add(happleseed.Factory('Camera', 'renderCam2', 
         parms=(('aspect_ratio',1), ), model="pinhole_camera"))
+    
+    assert(scene.find("frame"))
+    assert(scene.find("camera"))
+    assert(scene.find('camera').get('model') == 'pinhole_camera')
+    assert(scene.find('frame').get_by_name('resolution').get('value') == [1920, 1080]) # This is correct, but bug is there 
 
-    assert(scene.find('camera'))
-    assert(scene.find('frame').get_by_name('resolution').get('value') == [1920, 1080])
-
-    # (3) or more object oriented?
     apple = happleseed.AppleSeed()
-    apple.scene = Scene()
+    # we don't bother
+    apple.project.add(Configurations().add(Configuration("final").add_parms([
+        ('frame_renderer', 'generic'), 
+        ('tile_renderer', 'generic'),
+        ('pixel_renderer', 'uniform')])))
 
-    # How about create context with parent, is it general? 
-    apple.assembly = Assembly('assembly')
-    apple.project.add(apple.scene)
-    apple.scene.add(apple.assembly)  
+    assert(apple.project.find('configurations'))
+    assert(apple.project.find('configurations').get_by_name('final')\
+        .get_by_name('frame_renderer').get('value') == 'generic')
 
-    assert(splitXMLtoWords(str(apple.project)) == minimal_project)
 
-    #  via factory() method:
-    # by default first assembly is a scene:
-    light = apple.factory('scene').create('Light', 'lamp', model='point_light')
-    print light
-    # This addes three objects:
-    env = apple.factory('scene').create('Environment', 'preetham_env', turbidity=2.0)
-    # print env
-    # len(objects) == 3
-    objects = happleseed.Environment('preetham_env', turbidity=2.0) 
-    assert(len(objects) == 3)
-    # This for example is not valided with Appleseed schema: 
-    # apple.factory('scene').create('MeshObject'))
-    mesh = apple.factory().create('MeshObject','mesh1', filename="mesh.obj")
-
-    quit()
 
     # Yet another way
     apple = happleseed.AppleSeed()
+    apple.Scene()
+    apple.Assembly()
+    print apple.project
+    # assert(splitXMLtoWords(str(apple.project)) == minimal_project)
+    quit()
+
+    
     apple.Scene().add('Environment', 'preetham_env', turbidity=2.0)
     apple.Assembly('assembly').add('Light', 'sun', model='point_light')
     apple.Assembly().add('MeshObject', 'torus', filename='torus.obj')

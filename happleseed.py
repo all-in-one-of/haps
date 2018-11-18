@@ -1,4 +1,7 @@
 import haps
+import happleseed_types
+import collections
+import types
 
 def Factory(typename,  name, parms=(), **kwargs):
     # FIXME: tuples in parm's values aren't collaped to strings (?)
@@ -10,13 +13,34 @@ def Factory(typename,  name, parms=(), **kwargs):
     return object_
 
 
-
 class AppleSeed(object):
-    project = None
-    scene   = None
-    assembly= None
-    config  = None
-    output  = None
+    """ Our main class responsible for creating appleseed project.
+        Should be smart enough to disallow user from creating
+        misconstructed XML. Main responsibility of this class is
+        constucting Factory object via funtions like Scene(), Assembly()
+        (note capital character at front), which create and inserts haps 
+        objects (atomics) and happleseed objects (compounds) likewise into
+        a project. Nothing fancy exept it releases user from creating 
+        everything by hand or making sure some elements are singelton
+        and some other not.
+
+        :example: 
+                  apple = AppleSeed()
+                  apple.Scene().insert(ThinLensCamera())
+                  apple.Assembly().insert(MeshObject('box', filename='box.obj'))
+                  apple.Assembly('second_assembly').insert(Light('lamp'))
+    """
+    # This probably should be initialized here, but then
+    # we constraint the user from creating new scene in the project 
+    # effectivelly starting from scratch (TODO rethink )
+    # This means that whenever we want to use Factory, we
+    # have to add default element (lots of waste of code, but potentialy
+    # flexibility we need in some cases (like multithreading)).
+    project  = None 
+    scene    = None 
+    assembly = None 
+    config   = None 
+    output   = None
 
     class TypeFactory(object):
         """ Lets try differnt approach.
@@ -26,8 +50,7 @@ class AppleSeed(object):
 
         def add(self, typename, name, **kwargs):
             """Alias for insert()."""
-            objects = self.create(typename, name, **kwargs)
-            self.parent.add(objects)
+            self.insert(typename, name, **kwargs)
 
         def insert(self, typename, name, **kwargs):
             """Inserts objects returned by create()."""
@@ -50,7 +73,7 @@ class AppleSeed(object):
             objects = []
             if hasattr(thismodule, typename):
                 print 'from this module %s' % typename
-                objects = list(getattr(thismodule, typename)(name, **kwargs))
+                objects = list(getattr(happleseed_types, typename)(name, **kwargs))
             elif hasattr(haps, typename):
                 print 'from haps %s' % typename
                 objects += getattr(haps, typename)(name, **kwargs)
@@ -58,7 +81,7 @@ class AppleSeed(object):
             else:
                 raise Exception("Can't create an object of unknow type: %s" % typename)
             # FIXME: why non happies end up here?
-            return [obj for obj in objects if isinstance(obj, haps.HapsObj)]
+            return [obj for obj in objects if isinstance(obj, haps_types.HapsObj)]
 
     def __init__(self):
         """Creates bare minimum."""
@@ -83,7 +106,7 @@ class AppleSeed(object):
             self.scene.add(haps.Assembly_Instance(
                 'default_asmb_inst', assembly=self.assembly))
         for assembly in self.scene['assembly']:
-            if assembly[haps.attribute_token+'name'] == name:
+            if assembly[assembly.attribute_token+'name'] == name:
                 return self.TypeFactory(assembly)
         return self.TypeFactory(self.assembly)
 
@@ -113,6 +136,9 @@ class AppleSeed(object):
 
 
             
+
+
+
 
 
 
