@@ -35,7 +35,7 @@ def PinholeCamera(name, **kwargs):
         ("horizontal_fov", 45),
         ("near_z",  -0.001)])
     camera = haps.update_parameters(camera, **kwargs)
-    return camera, None
+    return camera
 
 # TODO: make choices predefined (enumarator style)
 # Possible values for filters are: blackman-harris (Blackman-Harris), box (Box), catmull (Catmull-Rom Spline), bspline (Cubic B-spline), gaussian (Gaussian), lanczos (Lanczos), mitchell (Mitchell-Netravali), triangle (Triangle).
@@ -51,7 +51,7 @@ def Frame(name, **kwargs):
         ("filter_size", 1.5 )])
     frame = haps.update_parameters(frame, **kwargs)
 
-    return frame, None
+    return frame
 
 # Doesn't work, because of edf?
 # def SunLight(name, **kwargs):
@@ -91,7 +91,7 @@ def EnvironmentEdf(name, **kwargs):
             ("turbidity_multiplier" ,"1.0" ),
         ])
     env = haps.update_parameters(env, **kwargs)
-    return env, None
+    return env
 
 
 def SpectralColor(name, values=[1,1,1], alpha=1.0, **kwargs):
@@ -101,7 +101,7 @@ def SpectralColor(name, values=[1,1,1], alpha=1.0, **kwargs):
         ('wavelength_range', '400 700'),])
     color.add(haps.Values(values).add(haps.Alpha([alpha])))
     color = haps.update_parameters(color, **kwargs)
-    return color, None
+    return color
 
 
 def MeshObject(name, filename, **kwargs):
@@ -130,14 +130,14 @@ def InteractiveConfiguration(name='base_interactive', **kwargs):
                 ("max_specular_bounces", "-1"),
                 ("next_event_estimation", "true"),
                 ("rr_min_path_length", "6")]))
-    return conf, None
+    return conf
 
 
 
 def PhysicalSurfaceShader(name, lighting_samples=1):
     shader = haps.Surface_Shader(name, model='physical_surface_shader')
     shader.add(haps.Parameter('lighting_samples', lighting_samples))
-    return shader, None
+    return shader
 
 
 def DisneyMaterialLayer(name, layer_number, **kwargs):
@@ -160,7 +160,7 @@ def DisneyMaterialLayer(name, layer_number, **kwargs):
             ("subsurface", "0.0"),
         ])
     parms = haps.update_parameters(parms, **kwargs)
-    return parms, None
+    return parms
 
 
 def DisneyMaterial(name, layers=1, **kwargs):
