@@ -235,7 +235,7 @@ def main():
     objects2 = apple.Assembly().create('MeshObject', 'torus', filename='torus.obj', xform=Matrix())
     assert(''.join(map(str, objects1)) == ''.join(map(str, objects2)))
 
-    apple.Scene().insert('Assembly', 'new_assembly')
+
     apple.Assembly('new_assembly').insert('MeshObject', 'torus2', filename='torus2.obj')
     
 
