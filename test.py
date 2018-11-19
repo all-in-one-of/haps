@@ -313,7 +313,7 @@ def main():
 
     from lxml import etree
     schema_path = "../appleseed/sandbox/schemas/project.xsd"
-    xml = etree.XML(apple.project.toxml())
+    xml = etree.XML(apple.project.tostring())
     xmlschema_doc = etree.parse(schema_path)
     xmlschema = etree.XMLSchema(xmlschema_doc)
     xmlschema.assertValid(xml)
