@@ -203,7 +203,7 @@ def main():
 
     # Yet another way, probably the righ way
     minimal_project = ['<project format_revision="%i">' % FORMAT_REVISION, '<scene>', 
-    '<assembly_instance name="default_asmb_inst" assembly="assembly"/>',
+    '<assembly_instance name="assembly_inst" assembly="assembly"/>',
         '<assembly name="assembly"/>', '</scene>', '</project>']
 
     # for now I don't initialize nothing but project. 
@@ -214,7 +214,7 @@ def main():
     assert(apple.scene == Scene())
     apple.Assembly()
     assert(apple.assembly == Assembly('assembly'))
-    # assert(splitXMLtoWords(str(apple.project)) == minimal_project)
+    assert(splitXMLtoWords(str(apple.project)) == minimal_project)
 
     # Scene returns factory class which is trained to add objects into right place
     apple.Scene().add('Environment', 'preetham_env', turbidity=2.123)
