@@ -68,12 +68,18 @@ class AppleSeed(object):
 
             """
             objects = self.create(typename, name, **kwargs)
-            for obj in objects:
-                duplicate =self.parent.get_by_name(obj.get('name'))
-                if duplicate:
-                    self.parent.remove(duplicate)
-            self.parent.add(objects)
+            self.emplace(objects)
 
+        def emplace(self, objects, replace=True):
+            """Insert pre-created objects into parent."""
+            if not isinstance(objects, collections.Iterable):
+                objects = [objects]
+            if replace:
+                for obj in objects:
+                    duplicate =self.parent.get_by_name(obj.get('name'))
+                    if duplicate:
+                        self.parent.remove(duplicate)
+            self.parent.add(objects)
 
         def create(self, typename, name, **kwargs):
             """ Creates object of type 'typename' defined either
