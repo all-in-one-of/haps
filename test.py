@@ -292,6 +292,9 @@ def main():
         .get('value')
     assert(max_bounces == '-1')
 
+    # better xml perhpas (WIP)
+    apple.project.toxml(sys.stdout)
+
 
     # Debug with line number
     counter = 1
