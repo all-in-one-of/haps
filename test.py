@@ -238,6 +238,14 @@ def main():
     # Appends new assembly, its instance (with default transform) and new object into it:
     apple.Assembly('new_assembly').insert('MeshObject', 'torus2', filename='torus2.obj')
 
+    # Motion blur
+    xforms = []
+    for step in range(5):
+        xforms.append(Matrix())
+    apple.Assembly('new_assembly').insert('MeshObject', 'moving_box', filename='box.obj', xforms=xforms)
+    print apple.scene.get_by_name('new_assembly')
+
+
     assert(len(apple.scene.findall('assembly')) == 2)
     assert(len(apple.scene.findall('assembly_instance')) == 2)
     assert(apple.scene.get_by_name('new_assembly'))
@@ -279,7 +287,7 @@ def main():
         .get('value')
     assert(max_bounces == '-1')
 
-    
+
     # Debug with line number
     counter = 1
     for line in str(apple.project).split('\n'):

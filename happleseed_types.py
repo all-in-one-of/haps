@@ -1,4 +1,5 @@
 import haps
+import collections
 
 def ThinLensCamera(name, **kwargs):
     camera = haps.Camera(name=name, model='thinlens_camera')
@@ -105,12 +106,21 @@ def SpectralColor(name, values=[1,1,1], alpha=1.0, **kwargs):
 
 
 def MeshObject(name, filename, **kwargs):
+    """Mesh object with transformation motion blur."""
     xform = kwargs.get('xform') if kwargs.get('xform')\
         else haps.Matrix()
     object_ = haps.Object(name, model='mesh_object')
     object_.add(haps.Parameter('filename', filename))
-    obj_inst = haps.Object_Instance(name+'_inst', object=name)
-    obj_inst.add(haps.Transform().add(xform))
+    obj_inst = haps.Object_Instance(name+'_inst', object=object_)
+    if not kwargs.get('xforms'):
+        obj_inst.add(haps.Transform().add(xform))
+    else:
+        xforms = kwargs.get('xforms')
+        timestep = 1.0 / len(xforms)
+        assert(isinstance(xforms, collections.Iterable))
+        for idx in range(len(xforms)):
+            assert(isinstance(xforms[idx], haps.Matrix))
+            obj_inst.add(haps.Transform(time=timestep*idx).add(xforms[idx]))
     return object_, obj_inst
 
 
