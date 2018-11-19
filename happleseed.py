@@ -122,10 +122,13 @@ class AppleSeed(object):
             self.project.add(self.config)
         if not name: 
             return self.TypeFactory(self.config)
-        for config in self.config['configuration']:
-            if config[haps.attribute_token+'name'] == name:
+        
+        config = self.config.get_by_name(name)
+        if config:
                 return  self.TypeFactory(config)
-        return self.TypeFactory(self.config)
+
+        else:
+            raise Exception("Can't find a config %s" % name)
 
     def Output(self):
         """Adds Frame object to project.output."""
