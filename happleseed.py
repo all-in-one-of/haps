@@ -104,9 +104,11 @@ class AppleSeed(object):
         assembly = self.scene.get_by_name(name)
         if not assembly:
             assembly = haps.Assembly(name)
-            self.scene.add(assembly)
-            self.scene.add(haps.Assembly_Instance(
-                name+'_inst', assembly=assembly))
+            instance = haps.Assembly_Instance(
+                name+'_inst', assembly=assembly).add(
+                haps.Transform().add(haps.Matrix()))
+            self.scene.add([assembly, instance])
+
             if not self.assembly:
                self.assembly = assembly
 

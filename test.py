@@ -203,8 +203,10 @@ def main():
 
     # Yet another way, probably the righ way
     minimal_project = ['<project format_revision="%i">' % FORMAT_REVISION, '<scene>', 
-    '<assembly_instance name="assembly_inst" assembly="assembly"/>',
-        '<assembly name="assembly"/>', '</scene>', '</project>']
+    '<assembly_instance name="assembly_inst" assembly="assembly">','<transform time="0">',
+            '<matrix>1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1</matrix>',
+            '</transform>', '</assembly_instance>','<assembly name="assembly"/>', 
+            '</scene>', '</project>']
 
     # for now I don't initialize nothing but project. 
     # We might change it in a while (now first call add defaults)
@@ -238,8 +240,6 @@ def main():
 
     apple.Assembly('new_assembly').insert('MeshObject', 'torus2', filename='torus2.obj')
     
-
-    print apple.project
     quit()
     apple.Config().insert('InteractiveConfiguration', 'base_interactive')
     # Replace one element:
