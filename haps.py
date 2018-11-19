@@ -2,6 +2,9 @@ from haps_types import HapsObj, HapsVal, FORMAT_REVISION
 import collections
 import types
     
+import logging, sys
+logging.basicConfig(stream=sys.stderr, level=logging.DEBUG)
+logger = logging.getLogger(__name__)
 
 def update_parameters(obj, **kwargs):
     """Update object's parmaters with provided **kwargs.
@@ -14,13 +17,17 @@ def update_parameters(obj, **kwargs):
     """
     for key, value in kwargs.items():
         parm = obj.get_by_name(key)
+        # Ignore 
+        if not parm:
+            # logger.debug('Ignoring non existing parm: %s' % key)
+            continue
         if isinstance(value, collections.Iterable) and \
         not  isinstance(value, types.StringTypes):
             value = ' '.join(map(str, value))
         parm.set('value', value)
     return obj
 
-    
+
 
 class Project(HapsObj):
     _children = []

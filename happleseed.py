@@ -58,8 +58,20 @@ class AppleSeed(object):
             self.insert(typename, name, **kwargs)
 
         def insert(self, typename, name, **kwargs):
-            """Inserts objects returned by create()."""
+            """Call create() method and insert created objects into parent. 
+            NOTE: we try to find and replace existing objects of type and name
+            returned by create(). Should we make new method replace()?
+
+            :parm typename: Object type to create. Both haps and happleseed types will do.
+            :parm name:     Object name to create. 
+            :parm kwargs:   optional kwargs passed to creation object.
+
+            """
             objects = self.create(typename, name, **kwargs)
+            for obj in objects:
+                duplicate =self.parent.get_by_name(obj.get('name'))
+                if duplicate:
+                    self.parent.remove(duplicate)
             self.parent.add(objects)
 
 
@@ -67,22 +79,18 @@ class AppleSeed(object):
             """ Creates object of type 'typename' defined either
                 inside this module or 'haps' module.
             """
-            def _remove_duplicate(parent, name):
-                obj = parent.find(name)
-                if obj:
-                    return parent.remove(obj)
 
             if hasattr(happleseed_types, typename):
-                # logger.debug('from happleseed_types module %s', typename)
-                objects = list(getattr(happleseed_types, typename)(name, **kwargs))
+                # logger.debug('from happleseed_types: %s', typename)
+                objects = getattr(happleseed_types, typename)(name, **kwargs)
+                if isinstance(objects, tuple):
+                    objects = list(objects)
             elif hasattr(haps, typename):
-                # logger.debug('from haps %s', typename)
+                # logger.debug('from haps: %s', typename)
                 objects = [getattr(haps, typename)(name, **kwargs)]
-                # print objects
             else:
                 raise Exception("Can't create an object of unknow type: %s" % typename)
-            # FIXME: why non happies end up here?
-            return [obj for obj in objects if isinstance(obj, haps.HapsObj)]
+            return objects
 
     def __init__(self):
         """Creates bare minimum."""

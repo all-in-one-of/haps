@@ -178,6 +178,6 @@ def DisneyMaterial(name, layers=1, **kwargs):
     material = haps.update_parameters(material, **kwargs)
     for layer in range(1, layers+1):
         name = 'layer%i' % layer
-        material.add(DisneyMaterialLayer(name, layer))
+        material.add(DisneyMaterialLayer(name, layer, **kwargs))
     return shader, material
 

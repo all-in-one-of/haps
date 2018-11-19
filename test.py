@@ -143,7 +143,6 @@ def main():
     project.add(config)
     # We're done:
     xml = project.tostring()
-    # print xml
     # with open(filename, 'w') as file: file.write(xml) etc...
 
 
@@ -200,7 +199,6 @@ def main():
         .get_by_name('frame_renderer').get('value') == 'generic')
 
 
-
     # Yet another way, probably the righ way
     minimal_project = ['<project format_revision="%i">' % FORMAT_REVISION, '<scene>', 
     '<assembly_instance name="assembly_inst" assembly="assembly">','<transform time="0">',
@@ -244,15 +242,19 @@ def main():
     assert(len(apple.scene.findall('assembly_instance')) == 2)
     assert(apple.scene.get_by_name('new_assembly'))
 
-    quit()
+    # apple.config.add(happleseed_types.InteractiveConfiguration('base_interactive'))
+    # FIXME this adds params, not parrent configuration ?
     apple.Config().insert('InteractiveConfiguration', 'base_interactive')
+
     # Replace one element:
     apple.Config('base_interactive').insert('Parameter', 'lighting_engine', value='nonsense')
-    # assert(apple.project.find('configurations').get_by_name('base_interactive')\
-    #     .get_by_name('lighting_engine').get('value') == 'nonsense')
-    # apple.Config('base_interactive').insert('Parameter', 'lighting_engine', value='ptt')
-    # assert(apple.project.find('configurations').get_by_name('base_interactive')\
-    #     .get_by_name('lighting_engine').get('value') == 'ptt')
+    assert(apple.project.find('configurations').get_by_name('base_interactive')\
+        .get_by_name('lighting_engine').get('value') == 'nonsense')
+
+    # Replace again
+    apple.Config('base_interactive').insert('Parameter', 'lighting_engine', value='ptt')
+    assert(apple.project.find('configurations').get_by_name('base_interactive')\
+        .get_by_name('lighting_engine').get('value') == 'ptt')
 
 
     apple.Output().insert('Frame', 'beauty', resolution=[1920, 1080])
@@ -265,30 +267,34 @@ def main():
     assert(apple.assembly.find('material'))
     assert(apple.assembly.find('material').get('name') == 'some_disney_material')
     assert(apple.assembly.get_by_name('some_disney_material').get('model')  == 'disney_material')
+    # FIXME: unify numeric parameters, now sometimes they are early rendered to strings sometimes not.
+    assert(apple.assembly.get_by_name('some_disney_material')\
+        .find('parameters').get_by_name('base_color').get('value') == "1 0 0") # BUG
 
-    with open('test.appleseed', 'w') as file:
-        file.write(apple.project.toxml())
-        file.close()
 
     # How to get to subelements:
     max_bounces = apple.config.get_by_name('base_interactive')\
         .get_by_name('pt')\
         .get_by_name('max_bounces')\
         .get('value')
-
     assert(max_bounces == '-1')
+
+    
     # Debug with line number
     counter = 1
-    # for line in str(apple.project).split('\n'):
-    #     print str(counter) + "   " + line
-    #     counter += 1
-
+    for line in str(apple.project).split('\n'):
+        print str(counter) + "   " + line
+        counter += 1
 
     # Higher level should take care of a placement policy (xml schema)
     # to be really useful. How to make it happen? 
     # Callable()s could specifily their details with attributes? 
     # Also should Python object contain its schema or should be deduced 
     # from json/xml (I usually like this approach)?
+
+    # with open('test.appleseed', 'w') as file:
+    #     file.write(apple.project.toxml())
+    #     file.close()
 
     # Play with validation:
     try:
@@ -303,7 +309,6 @@ def main():
     xmlschema_doc = etree.parse(schema_path)
     xmlschema = etree.XMLSchema(xmlschema_doc)
     xmlschema.assertValid(xml)
-
 
 
 if __name__ == "__main__": main()
