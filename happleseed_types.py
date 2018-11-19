@@ -104,9 +104,23 @@ def SpectralColor(name, values=[1,1,1], alpha=1.0, **kwargs):
     color = haps.update_parameters(color, **kwargs)
     return color
 
+def TransformBlur(obj, xforms):
+    """Insert series of Transform object from provided matrices
+    :parm obj:    Assembly, Object, Light, etc
+    :parm xform:  List of Matrix obj.
+    :returns:     modified obj
+
+    """
+    timestep = 1.0 / len(xforms)
+    assert(isinstance(xforms, collections.Iterable))
+    for idx in range(len(xforms)):
+        assert(isinstance(xforms[idx], haps.Matrix))
+        obj.add(haps.Transform(time=timestep*idx).add(xforms[idx]))
+    return obj
 
 def MeshObject(name, filename, **kwargs):
-    """Mesh object with transformation motion blur."""
+    """Create mesh object adn its instance with transformation applied.
+    """
     xform = kwargs.get('xform') if kwargs.get('xform')\
         else haps.Matrix()
     object_ = haps.Object(name, model='mesh_object')
@@ -115,12 +129,7 @@ def MeshObject(name, filename, **kwargs):
     if not kwargs.get('xforms'):
         obj_inst.add(haps.Transform().add(xform))
     else:
-        xforms = kwargs.get('xforms')
-        timestep = 1.0 / len(xforms)
-        assert(isinstance(xforms, collections.Iterable))
-        for idx in range(len(xforms)):
-            assert(isinstance(xforms[idx], haps.Matrix))
-            obj_inst.add(haps.Transform(time=timestep*idx).add(xforms[idx]))
+        obj_inst = TransformBlur(obj_inst, kwargs.get('xforms'))
     return object_, obj_inst
 
 
