@@ -1,5 +1,6 @@
 import collections, types
 from collections import defaultdict
+from StringIO import StringIO
 
 
 class Element(defaultdict):
@@ -31,6 +32,10 @@ class Element(defaultdict):
         for typename, children in self.items():
             if typename.startswith(self.attribute_token):
                 continue
+            # FIXME: HapsVal was a mistake
+            # if isinstance(children, collections.Iterable):
+                # continue
+                # yield children
             for child in children:
                 yield child 
 
@@ -40,6 +45,11 @@ class Element(defaultdict):
         """
         root=type(self).__name__.lower()
         return self.tostring(root=root)
+
+    @property
+    def tag(self):
+        return type(self).__name__.lower()
+
 
     def append(self, obj):
         """Add child element to current parent.
@@ -143,4 +153,27 @@ class Element(defaultdict):
         from json import dumps
         return dumps(self, indent=indent)
 
+    def _attributes_to_string(self):
+        attrib_keys = self.keys()
+        attrib_str  = ['%s="%s"' % (k.strip(self.attribute_token), \
+            str(self[k])) for k in attrib_keys]
+        return ' '.join(attrib_str)
 
+    def toxml(self, fileio, indent=0, whitespace=' '*4):
+        """Turn element into XML tag locally.
+        """
+        has_children = '/' if self.keys() == super(Element, self).keys() else ''
+
+        fileio.write('%s<%s %s%s>\n' % (whitespace*indent, self.tag,\
+            self._attributes_to_string(), has_children))
+
+        for child in self:
+            if not isinstance(child, Element):
+                # FIXME
+                # value = ' '.join(map(str, child))
+                # fileio.write(indent_str + value + '\n')
+                continue 
+            child.toxml(fileio, indent=indent+1)
+
+        if not has_children:
+            fileio.write('%s</%s>\n' % (whitespace * indent, self.tag))
