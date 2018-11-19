@@ -71,17 +71,16 @@ class AppleSeed(object):
 
             thismodule = modules[__name__]
             objects = []
-            if hasattr(thismodule, typename):
-                print 'from this module %s' % typename
+            if hasattr(happleseed_types, typename):
+                print 'from happleseed_types module %s' % typename
                 objects = list(getattr(happleseed_types, typename)(name, **kwargs))
             elif hasattr(haps, typename):
                 print 'from haps %s' % typename
                 objects += getattr(haps, typename)(name, **kwargs)
-                print objects
             else:
                 raise Exception("Can't create an object of unknow type: %s" % typename)
             # FIXME: why non happies end up here?
-            return [obj for obj in objects if isinstance(obj, haps_types.HapsObj)]
+            return [obj for obj in objects if isinstance(obj, haps.HapsObj)]
 
     def __init__(self):
         """Creates bare minimum."""
