@@ -105,10 +105,12 @@ def SpectralColor(name, values=[1,1,1], alpha=1.0, **kwargs):
 
 
 def MeshObject(name, filename, **kwargs):
+    xform = kwargs.get('xform') if kwargs.get('xform')\
+        else haps.Matrix()
     object_ = haps.Object(name, model='mesh_object')
     object_.add(haps.Parameter('filename', filename))
-    obj_inst = haps.Object_Instance('inst_'+name, object=name)
-    obj_inst.add(haps.Transform().add(haps.Matrix()))
+    obj_inst = haps.Object_Instance(name+'_inst', object=name)
+    obj_inst.add(haps.Transform().add(xform))
     return object_, obj_inst
 
 

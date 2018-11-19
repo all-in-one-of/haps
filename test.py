@@ -201,23 +201,47 @@ def main():
 
 
 
-    # Yet another way
+    # Yet another way, probably the righ way
+    minimal_project = ['<project format_revision="%i">' % FORMAT_REVISION, '<scene>', 
+    '<assembly_instance name="default_asmb_inst" assembly="assembly"/>',
+        '<assembly name="assembly"/>', '</scene>', '</project>']
+
+    # for now I don't initialize nothing but project. 
+    # We might change it in a while (now first call add defaults)
     apple = happleseed.AppleSeed()
+    assert(apple.project == Project())
     apple.Scene()
+    assert(apple.scene == Scene())
     apple.Assembly()
-    print apple.project
+    assert(apple.assembly == Assembly('assembly'))
     # assert(splitXMLtoWords(str(apple.project)) == minimal_project)
-    quit()
 
+    # Scene returns factory class which is trained to add objects into right place
+    apple.Scene().add('Environment', 'preetham_env', turbidity=2.123)
+
+    assert(apple.scene.find('environment'))
+    assert(apple.scene.find('environment_edf'))
+    assert(apple.scene.find('environment_shader'))
+    assert(apple.scene.find('environment_edf').get_by_name('turbidity').get('value')==2.123)
     
-    apple.Scene().add('Environment', 'preetham_env', turbidity=2.0)
     apple.Assembly('assembly').add('Light', 'sun', model='point_light')
-    apple.Assembly().add('MeshObject', 'torus', filename='torus.obj')
-    apple.scene.add(Assembly('new_assembly'))
-    apple.scene.add(Assembly_Instance('na_inst', assembly='new_assembly'))
-    apple.Assembly('new_assembly').add('MeshObject', 'torus2', filename='torus.obj')
-    apple.Config().insert('InteractiveConfiguration', 'base_interactive')
+    assert(apple.assembly.find('light') == apple.assembly.get_by_name('sun'))
 
+    apple.Assembly().add('MeshObject', 'torus', filename='torus.obj', \
+        xform=Matrix())
+
+    # Mesh object + mesh object instance
+    objects1 = apple.Assembly().create('MeshObject', 'torus', filename='torus.obj')
+    objects2 = apple.Assembly().create('MeshObject', 'torus', filename='torus.obj', xform=Matrix())
+    assert(''.join(map(str, objects1)) == ''.join(map(str, objects2)))
+
+    apple.Scene().insert('Assembly', 'new_assembly')
+    apple.Assembly('new_assembly').insert('MeshObject', 'torus2', filename='torus2.obj')
+    
+
+    print apple.project
+    quit()
+    apple.Config().insert('InteractiveConfiguration', 'base_interactive')
     # Replace one element:
     apple.Config('base_interactive').insert('Parameter', 'lighting_engine', value='nonsense')
     # assert(apple.project.find('configurations').get_by_name('base_interactive')\

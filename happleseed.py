@@ -3,6 +3,11 @@ import happleseed_types
 import collections
 import types
 
+import logging, sys
+logging.basicConfig(stream=sys.stderr, level=logging.DEBUG)
+logger = logging.getLogger(__name__)
+
+
 def Factory(typename,  name, parms=(), **kwargs):
     # FIXME: tuples in parm's values aren't collaped to strings (?)
     object_ = getattr(haps, typename)(name, **kwargs)
@@ -67,16 +72,13 @@ class AppleSeed(object):
                 if obj:
                     return parent.remove(obj)
 
-            from sys import modules
-
-            thismodule = modules[__name__]
-            objects = []
             if hasattr(happleseed_types, typename):
-                print 'from happleseed_types module %s' % typename
+                # logger.debug('from happleseed_types module %s', typename)
                 objects = list(getattr(happleseed_types, typename)(name, **kwargs))
             elif hasattr(haps, typename):
-                print 'from haps %s' % typename
-                objects += getattr(haps, typename)(name, **kwargs)
+                # logger.debug('from haps %s', typename)
+                objects = [getattr(haps, typename)(name, **kwargs)]
+                # print objects
             else:
                 raise Exception("Can't create an object of unknow type: %s" % typename)
             # FIXME: why non happies end up here?
@@ -99,15 +101,17 @@ class AppleSeed(object):
         """ Returns the assembly 'name' from a scene object. In case it doesn't exist,
             return default one (self.assembly).
         """
-        if not self.assembly:
-            self.assembly = haps.Assembly('assembly')
-            self.scene.add(self.assembly)
+        assembly = self.scene.get_by_name(name)
+        if not assembly:
+            assembly = haps.Assembly(name)
+            self.scene.add(assembly)
             self.scene.add(haps.Assembly_Instance(
-                'default_asmb_inst', assembly=self.assembly))
-        for assembly in self.scene['assembly']:
-            if assembly[assembly.attribute_token+'name'] == name:
-                return self.TypeFactory(assembly)
-        return self.TypeFactory(self.assembly)
+                name+'_inst', assembly=name))
+            if not self.assembly:
+               self.assembly = assembly
+
+        return self.TypeFactory(assembly)
+
 
     def Config(self, name=None, **kwargs):
         """Adds configuration object 'name' to the default configuration."""

@@ -4,6 +4,10 @@ FORMAT_REVISION = 27
 from etree_impl import Element
 # from xml.etree.ElementTree import Element, tostring
 
+import logging, sys
+logging.basicConfig(stream=sys.stderr, level=logging.DEBUG)
+logger = logging.getLogger(__name__)
+
 class HapsVal(collections.Sequence):
     """HapsVal is a special case in XML world. This is non attribute / numeric varible 
         text values XML tag.
