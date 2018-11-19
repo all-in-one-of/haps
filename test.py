@@ -239,12 +239,17 @@ def main():
     apple.Assembly('new_assembly').insert('MeshObject', 'torus2', filename='torus2.obj')
 
     # Motion blur
-    xforms = []
-    for step in range(5):
-        xforms.append(Matrix())
+    xforms = [Matrix() for step in range(5)]
     apple.Assembly('new_assembly').insert('MeshObject', 'moving_box', filename='box.obj', xforms=xforms)
-    print apple.scene.get_by_name('new_assembly')
+    assert(len(apple.scene.get_by_name('new_assembly')\
+        .get_by_name('moving_box_inst').findall('transform')) == 5)
 
+    # How to easiliy get to object instances?
+    instances = [inst for inst in apple.scene.get_by_name("new_assembly")\
+        .findall('object_instance') if inst.get('object') == 'moving_box']
+    assert(instances)
+
+    # TODO: add easy duplicating (via deecopy) with auto renaming.
 
     assert(len(apple.scene.findall('assembly')) == 2)
     assert(len(apple.scene.findall('assembly_instance')) == 2)
