@@ -237,9 +237,13 @@ def main():
     objects2 = apple.Assembly().create('MeshObject', 'torus', filename='torus.obj', xform=Matrix())
     assert(''.join(map(str, objects1)) == ''.join(map(str, objects2)))
 
-
+    # Appends new assembly, its instance (with default transform) and new object into it:
     apple.Assembly('new_assembly').insert('MeshObject', 'torus2', filename='torus2.obj')
-    
+
+    assert(len(apple.scene.findall('assembly')) == 2)
+    assert(len(apple.scene.findall('assembly_instance')) == 2)
+    assert(apple.scene.get_by_name('new_assembly'))
+
     quit()
     apple.Config().insert('InteractiveConfiguration', 'base_interactive')
     # Replace one element:
