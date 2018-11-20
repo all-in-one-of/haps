@@ -23,6 +23,10 @@ class HapsVal(collections.Sequence):
     def __repr__(self):
         return ' '.join(map(str, self.data))
 
+class HapsVal2(Element):
+    def __init__(self, values):
+        self['#'] = values
+
 
 class HapsObj(Element):
     """Element object which maps to all XML elements except elmenents

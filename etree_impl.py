@@ -9,6 +9,7 @@ class Element(defaultdict):
     """
     #FIXME: Changing this causes a bug (some of the attribs names are swollowed)
     attribute_token = '@'
+    text_token      = '#'
 
     def __init__(self, name=None, **kwargs):
         """Init object with attribs from kwargs."""
@@ -26,11 +27,16 @@ class Element(defaultdict):
 
     def __setattr__(self, name, value):
         """Maps Python object attribs to xml attribs via @notation in json."""
-        super(Element, self).__setitem__(self.attribute_token+name, value)
+        if name == self.text_token:
+            super(Element, self).__setitem__(self.text_token, value)
+        else:
+            super(Element, self).__setitem__(self.attribute_token+name, value)
 
     def __iter__(self):
         for typename, children in self.items():
             if typename.startswith(self.attribute_token):
+                continue
+            if typename.startswith(self.text_token):
                 continue
             # FIXME: HapsVal was a mistake
             # if isinstance(children, collections.Iterable):
@@ -50,6 +56,15 @@ class Element(defaultdict):
     def tag(self):
         return type(self).__name__.lower()
 
+    @property 
+    def text(self):
+        if self.text_token in super(Element, self).keys():
+            return self[self.text_token]
+        return
+
+    @property
+    def data(self):
+        return self.text
 
     def append(self, obj):
         """Add child element to current parent.
@@ -168,12 +183,12 @@ class Element(defaultdict):
             self._attributes_to_string(), has_children))
 
         for child in self:
-            if not isinstance(child, Element):
-                # FIXME
-                # value = ' '.join(map(str, child))
-                # fileio.write(indent_str + value + '\n')
-                continue 
-            child.toxml(fileio, indent=indent+1)
+            if not child.text:
+                child.toxml(fileio, indent=indent+1)
+            else:
+                fileio.write('%s<%s>\n' % (whitespace*(indent+1), child.tag))
+                fileio.write('%s%s\n' % (whitespace*(indent+2), ' '.join(map(str, child.text))))
+                fileio.write('%s<%s/>\n' % (whitespace*(indent+1), child.tag))
 
         if not has_children:
             fileio.write('%s</%s>\n' % (whitespace * indent, self.tag))

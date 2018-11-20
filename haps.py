@@ -1,4 +1,4 @@
-from haps_types import HapsObj, HapsVal, FORMAT_REVISION
+from haps_types import HapsObj, HapsVal, HapsVal2, FORMAT_REVISION
 import collections
 import types
     
@@ -159,12 +159,13 @@ class Look_At(HapsObj):
     pass
 
 
-class Values(HapsVal):
+class Values(HapsVal2):
     pass
 
 
-class Matrix(HapsVal):
+class Matrix(HapsVal2):
     identity = (1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1)
+    # identity = [1.0/1000.1 for x in range(16)]
     def __init__(self, m=None):
         if not m: m = self.identity
         assert(len(m) == 16)
