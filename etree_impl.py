@@ -6,7 +6,8 @@ class XMLTokens(object):
     element_template = '{whitespace}{start}{tag}{attrib}{end}{text}{nl}'
     start_tag = '<'
     end_tag   = '/>'
-    child_tag = '>'
+    parent_end_tag = '>'
+    parent_start_tag='</'
 
 
 class Element(defaultdict):
@@ -192,7 +193,7 @@ class Element(defaultdict):
         if self.keys() == super(Element, self).keys():
             etag = XMLTokens.end_tag
         else:
-            etag = XMLTokens.child_tag
+            etag = XMLTokens.parent_end_tag
 
         text  = ''
         if self.text:
@@ -212,9 +213,9 @@ class Element(defaultdict):
             if isinstance(child, Element):
                 child.toxml(fileio, indent=indent, _level=_level+1)
 
-        if etag == XMLTokens.child_tag and not self.text:
+        if etag == XMLTokens.parent_end_tag and not self.text:
             xml_token = XMLTokens.element_template.format(whitespace=whitespace,
-                start=XMLTokens.start_tag, tag=self.tag, end=XMLTokens.end_tag, attrib='',
+                start=XMLTokens.parent_start_tag, tag=self.tag, end=XMLTokens.parent_end_tag, attrib='',
                 text='', nl=new_line)
             # Close tag
             fileio.write(xml_token)
