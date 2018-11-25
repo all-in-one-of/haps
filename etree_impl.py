@@ -8,8 +8,8 @@ class Element(defaultdict):
        based on Python native dictionary.
     """
     #FIXME: Changing this causes a bug (some of the attribs names are swollowed)
-    text_template    ='\n{whitespace}{text}\n{whitespace}{start}{tag}{end}'
-    element_template = '{whitespace}{start}{tag}{attrib}{end}{text}\n'
+    text_template    ='{nl}{whitespace}{text}{nl}{whitespace}{start}{tag}{end}'
+    element_template = '{whitespace}{start}{tag}{attrib}{end}{text}{nl}'
     attribute_token = '@'
     text_token      = '#'
     start_tag = '<'
@@ -46,8 +46,7 @@ class Element(defaultdict):
         """ Major functionality of this class. Using base clase to tostring() method
             represents itself as a XML node / document.
         """
-        root=type(self).__name__.lower()
-        return self.tostring(root=root)
+        return self.tostring()
 
     @property
     def tag(self):
@@ -91,6 +90,7 @@ class Element(defaultdict):
             self[typename] = [obj]
         return self
 
+
     def extend(self, objs):
         """Extends element with collection of subelements.
 
@@ -99,6 +99,7 @@ class Element(defaultdict):
         """
         [self.append(x) for x in objs]
         return self
+
 
     def get(self, name, raise_on_fail=True):
         """Get local (self element's) attribute.
@@ -114,6 +115,7 @@ class Element(defaultdict):
             raise Exception('Attribute "%s" not present on object %s' % (name, self))
         return None
 
+
     def find(self, tag):
         """Find first child element of type name/tag. Only 
         first element of a type 'tag' will be returend. Use findall
@@ -127,6 +129,7 @@ class Element(defaultdict):
                 return self[typename][0]
         return None
 
+
     def findall(self, tag):
         """Finds all children elements of a given type (tag).
         :parm tag: the name of the type of elements to be returned."""
@@ -137,45 +140,52 @@ class Element(defaultdict):
                 return self[typename]
         return None
 
+
     def remove(self, obj):
         typename = type(obj).__name__.lower()
         assert(obj in self[typename])
         index = self[typename].index(obj)
         return self[typename].pop(index)
 
+
     def keys(self):
         return [key for key in super(Element, self).keys() \
             if key.startswith(self.attribute_token)]
+
 
     def set(self, key, value):
         self.__setattr__(key, value)
 
 
-    def tostring(self, pretty_print=True, indent=2, root='project'):
-        #TODO This has to be rewritten...
-        from dict2xml import dict2xml
-        if not pretty_print: indent = 0
-        return dict2xml(self, root, indent=indent, attribute_token=self.attribute_token)
+    def tostring(self, pretty_print=True):
+        """Returns xml string of current Element and its children."""
+        from StringIO import StringIO
+        return self.toxml(StringIO()).getvalue()
+
 
     def tojson(self, indent=2):
+        """Return json representation of current Element."""
         from json import dumps
         return dumps(self, indent=indent)
 
 
-    def toxml(self, fileio, indent=0, whitespace=' '*4):
-        """Turn element into XML tag.
-        """
+    def toxml(self, fileio, pretty_print=True, indent=0, whitespace=' '*4):
+        """Turn element into XML tag."""
         def _attributes_to_string():
-            """Keys to xml's attributes."""
             if not self.keys(): 
                 return ''
-            attributes_map  = ['{0}="{1}"'.format(
+            attributes_map = ['{0}="{1}"'.format(
                 k.strip(self.attribute_token), 
                 str(self[k])) for k in self.keys()]
             return ' ' + ' '.join(attributes_map)
 
         text = ''
+        new_line   = '\n'
         attributes = _attributes_to_string()
+
+        if not pretty_print:
+            whitespace = ''
+            new_line   = ''
 
         # Some keys are attributes (not returned by self.keys())...
         if self.keys() == super(Element, self).keys():
@@ -184,35 +194,27 @@ class Element(defaultdict):
             etag = self.child_tag
 
         if self.text:
-            text = self.text_template.format(
-                    whitespace=whitespace*(indent),
-                    text=' '.join(map(str, self.text)),
-                    start=self.start_tag, 
-                    tag=self.tag,
-                    end=self.end_tag)
+            text = self.text_template.format(whitespace=whitespace*(indent),
+                text=' '.join(map(str, self.text)), start=self.start_tag, 
+                tag=self.tag, end=self.end_tag, nl=new_line)
 
-        xml_token = self.element_template.format(
-            whitespace=whitespace*indent,
-            start=self.start_tag, 
-            tag=self.tag,
-            attrib=attributes,
-            end=etag, 
-            text=text)
+        xml_token = self.element_template.format(whitespace=whitespace*indent,
+            start=self.start_tag, tag=self.tag, attrib=attributes, end=etag, 
+            text=text, nl=new_line)
 
+        # Open tag
         fileio.write(xml_token)
         
         for child in self:
-            child.toxml(fileio, indent=indent+1)
+            # FIXME: Bug is here:
+            if isinstance(child, Element):
+                child.toxml(fileio, indent=indent+1)
 
         if etag == self.child_tag and not self.text:
-            xml_token = self.element_template.format(
-                whitespace=whitespace*indent,
-                start=self.start_tag,
-                tag=self.tag,
-                end=self.end_tag,
-                attrib='',
-                text=''
-                )
+            xml_token = self.element_template.format(whitespace=whitespace*indent,
+                start=self.start_tag, tag=self.tag, end=self.end_tag, attrib='',
+                text='', nl=new_line)
+            # Close tag
             fileio.write(xml_token)
 
         return fileio

@@ -292,15 +292,16 @@ def main():
         .get('value')
     assert(max_bounces == '-1')
 
-    # better xml perhpas (WIP)
-    apple.project.toxml(sys.stdout)
+    # better xml perhpas 
+    # apple.project.toxml(sys.stdout)
+    # print apple.project.tostring()
 
 
     # Debug with line number
-    # counter = 1
-    # for line in str(apple.project).split('\n'):
-    #     print str(counter) + "   " + line
-    #     counter += 1
+    counter = 1
+    for line in str(apple.project).split('\n'):
+        print str(counter) + "   " + line
+        counter += 1
 
     # Higher level should take care of a placement policy (xml schema)
     # to be really useful. How to make it happen? 
