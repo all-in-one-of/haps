@@ -1,20 +1,20 @@
 import collections, types
 from collections import defaultdict
-from StringIO import StringIO
+
+class XMLTokens(object):
+    text_template    ='{nl}{whitespace}{text}{nl}{whitespace}{start}{tag}{end}'
+    element_template = '{whitespace}{start}{tag}{attrib}{end}{text}{nl}'
+    start_tag = '<'
+    end_tag   = '/>'
+    child_tag = '>'
 
 
 class Element(defaultdict):
     """Minimal implementation of xml.ElementTree API
        based on Python native dictionary.
     """
-    #FIXME: Changing this causes a bug (some of the attribs names are swollowed)
-    text_template    ='{nl}{whitespace}{text}{nl}{whitespace}{start}{tag}{end}'
-    element_template = '{whitespace}{start}{tag}{attrib}{end}{text}{nl}'
     attribute_token = '@'
     text_token      = '#'
-    start_tag = '<'
-    end_tag   = '/>'
-    child_tag = '>'
 
     def __init__(self, name=None, **kwargs):
         """Init object with attribs from kwargs."""
@@ -90,7 +90,6 @@ class Element(defaultdict):
             self[typename] = [obj]
         return self
 
-
     def extend(self, objs):
         """Extends element with collection of subelements.
 
@@ -99,7 +98,6 @@ class Element(defaultdict):
         """
         [self.append(x) for x in objs]
         return self
-
 
     def get(self, name, raise_on_fail=True):
         """Get local (self element's) attribute.
@@ -115,13 +113,13 @@ class Element(defaultdict):
             raise Exception('Attribute "%s" not present on object %s' % (name, self))
         return None
 
-
     def find(self, tag):
         """Find first child element of type name/tag. Only 
         first element of a type 'tag' will be returend. Use findall
         to search for multiply elements of the 'tag'.
 
-        :parm tag: the name of the type of element type to be returned. """
+        :parm tag: the name of the type of element type to be returned.
+        """
         for typename, children in self.items():
             # only children, not attributes
             if not typename.startswith(self.attribute_token)\
@@ -129,10 +127,10 @@ class Element(defaultdict):
                 return self[typename][0]
         return None
 
-
     def findall(self, tag):
-        """Finds all children elements of a given type (tag).
-        :parm tag: the name of the type of elements to be returned."""
+        """Find all children elements of a given type (tag).
+        :parm tag: the name of the type of elements to be returned.
+        """
         for typename, children in self.items():
             # only children, not attributes
             if not typename.startswith(self.attribute_token)\
@@ -140,66 +138,70 @@ class Element(defaultdict):
                 return self[typename]
         return None
 
-
     def remove(self, obj):
+        """Remove element from a children list."""
         typename = type(obj).__name__.lower()
         assert(obj in self[typename])
         index = self[typename].index(obj)
         return self[typename].pop(index)
 
-
     def keys(self):
+        """Return a list of attributes of the element."""
         return [key for key in super(Element, self).keys() \
             if key.startswith(self.attribute_token)]
 
-
     def set(self, key, value):
+        """Sets a value of the attribute. """
         self.__setattr__(key, value)
 
-
     def tostring(self, pretty_print=True):
-        """Returns xml string of current Element and its children."""
+        """Returns xml string of current element and its children."""
         from StringIO import StringIO
         return self.toxml(StringIO()).getvalue()
 
-
     def tojson(self, indent=2):
-        """Return json representation of current Element."""
+        """Return json representation of current element."""
         from json import dumps
         return dumps(self, indent=indent)
 
+    def toxml(self, fileio, pretty_print=True, indent=4, _level=0):
+        """Render element and its children into XML document.
 
-    def toxml(self, fileio, pretty_print=True, indent=0, whitespace=' '*4):
-        """Turn element into XML tag."""
+        :parm fileio:       Writeable file-like object (file object, StringIO, sys.stdout etc)
+        :parm pretty_print: print with new lines and tabs (default True)
+        :parm indent:       Initial indent for pretty print (defualt 0)
+        :parm whitespace:   Whitespace used in pretty print (default 4* ' ')
+        :returns:           fileio object
+        """
         def _attributes_to_string():
-            if not self.keys(): 
-                return ''
             attributes_map = ['{0}="{1}"'.format(
                 k.strip(self.attribute_token), 
                 str(self[k])) for k in self.keys()]
             return ' ' + ' '.join(attributes_map)
 
-        text = ''
-        new_line   = '\n'
-        attributes = _attributes_to_string()
+        attributes = _attributes_to_string() if self.keys() else ''
 
-        if not pretty_print:
-            whitespace = ''
-            new_line   = ''
-
-        # Some keys are attributes (not returned by self.keys())...
-        if self.keys() == super(Element, self).keys():
-            etag = self.end_tag
+        if pretty_print:
+            new_line   = '\n'
+            whitespace = ' ' * indent * _level
         else:
-            etag = self.child_tag
+            new_line   = ''
+            whitespace = ''
 
+        # Some keys aren't attributes (not returned by self.keys())...
+        if self.keys() == super(Element, self).keys():
+            etag = XMLTokens.end_tag
+        else:
+            etag = XMLTokens.child_tag
+
+        text  = ''
         if self.text:
-            text = self.text_template.format(whitespace=whitespace*(indent),
-                text=' '.join(map(str, self.text)), start=self.start_tag, 
-                tag=self.tag, end=self.end_tag, nl=new_line)
+            text = XMLTokens.text_template.format(whitespace=whitespace,
+                text=' '.join(map(str, self.text)), start=XMLTokens.start_tag, 
+                tag=self.tag, end=XMLTokens.end_tag, nl=new_line)
 
-        xml_token = self.element_template.format(whitespace=whitespace*indent,
-            start=self.start_tag, tag=self.tag, attrib=attributes, end=etag, 
+        xml_token = XMLTokens.element_template.format(whitespace=whitespace,
+            start=XMLTokens.start_tag, tag=self.tag, attrib=attributes, end=etag, 
             text=text, nl=new_line)
 
         # Open tag
@@ -208,11 +210,11 @@ class Element(defaultdict):
         for child in self:
             # FIXME: Bug is here:
             if isinstance(child, Element):
-                child.toxml(fileio, indent=indent+1)
+                child.toxml(fileio, indent=indent, _level=_level+1)
 
-        if etag == self.child_tag and not self.text:
-            xml_token = self.element_template.format(whitespace=whitespace*indent,
-                start=self.start_tag, tag=self.tag, end=self.end_tag, attrib='',
+        if etag == XMLTokens.child_tag and not self.text:
+            xml_token = XMLTokens.element_template.format(whitespace=whitespace,
+                start=XMLTokens.start_tag, tag=self.tag, end=XMLTokens.end_tag, attrib='',
                 text='', nl=new_line)
             # Close tag
             fileio.write(xml_token)
