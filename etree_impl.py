@@ -8,8 +8,13 @@ class Element(defaultdict):
        based on Python native dictionary.
     """
     #FIXME: Changing this causes a bug (some of the attribs names are swollowed)
+    text_template    ='\n{whitespace}{text}\n{whitespace}{start}{tag}{end}'
+    element_template = '{whitespace}{start}{tag}{attrib}{end}{text}\n'
     attribute_token = '@'
     text_token      = '#'
+    start_tag = '<'
+    end_tag   = '/>'
+    child_tag = '>'
 
     def __init__(self, name=None, **kwargs):
         """Init object with attribs from kwargs."""
@@ -168,27 +173,57 @@ class Element(defaultdict):
         from json import dumps
         return dumps(self, indent=indent)
 
-    def _attributes_to_string(self):
-        attrib_keys = self.keys()
-        attrib_str  = ['%s="%s"' % (k.strip(self.attribute_token), \
-            str(self[k])) for k in attrib_keys]
-        return ' '.join(attrib_str)
 
     def toxml(self, fileio, indent=0, whitespace=' '*4):
-        """Turn element into XML tag locally.
+        """Turn element into XML tag.
         """
-        has_children = '/' if self.keys() == super(Element, self).keys() else ''
+        def _attributes_to_string():
+            """Keys to xml's attributes."""
+            if not self.keys(): 
+                return ''
+            attributes_map  = ['{0}={1}'.format(
+                k.strip(self.attribute_token), 
+                str(self[k])) for k in self.keys()]
+            return ' ' + ' '.join(attributes_map)
 
-        fileio.write('%s<%s %s%s>\n' % (whitespace*indent, self.tag,\
-            self._attributes_to_string(), has_children))
+        text = ''
+        attributes = _attributes_to_string()
+        # Some keys are attributes (not returned by self.keys())...
+        if self.keys() == super(Element, self).keys():
+            etag = self.end_tag
+        else:
+            etag = self.child_tag
 
+        if self.text:
+            text = self.text_template.format(
+                    whitespace=whitespace*(indent),
+                    text=' '.join(map(str, self.text)),
+                    start=self.start_tag, 
+                    tag=self.tag,
+                    end=self.end_tag)
+
+
+        xml_token = self.element_template.format(
+            whitespace=whitespace*indent,
+            start=self.start_tag, 
+            tag=self.tag,
+            attrib=attributes,
+            end=etag, 
+            text=text)
+
+        fileio.write(xml_token)
+        
         for child in self:
-            if not child.text:
-                child.toxml(fileio, indent=indent+1)
-            else:
-                fileio.write('%s<%s>\n' % (whitespace*(indent+1), child.tag))
-                fileio.write('%s%s\n' % (whitespace*(indent+2), ' '.join(map(str, child.text))))
-                fileio.write('%s<%s/>\n' % (whitespace*(indent+1), child.tag))
+            child.toxml(fileio, indent=indent+1)
 
-        if not has_children:
-            fileio.write('%s</%s>\n' % (whitespace * indent, self.tag))
+
+        if etag == self.child_tag and not self.text:
+            xml_token = self.element_template.format(
+                whitespace=whitespace*indent,
+                start=self.start_tag,
+                tag=self.tag,
+                end=self.end_tag,
+                attrib='',
+                text=''
+                )
+            fileio.write(xml_token)
