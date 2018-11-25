@@ -25,9 +25,9 @@ class Element(defaultdict):
             if isinstance(v, Element):
                 v = v[self.attribute_token+'name']
             # Collapse iterrables to string:
-            elif isinstance(v, collections.Iterable) and \
-            not  isinstance(v, types.StringTypes):
-                v = ' '.join(map(str, v))
+            # elif isinstance(v, collections.Iterable) and \
+            # not  isinstance(v, types.StringTypes):
+            #     v = ' '.join(map(str, v))
             self.__setattr__(k, v)
 
     def __setattr__(self, name, value):

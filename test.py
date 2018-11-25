@@ -73,7 +73,7 @@ def main():
 
     # Queries and deletion
     camera = scene.get_by_name('camera1')
-    assert(camera.find('transform').find('look_at').get('up') == "0 1 0")
+    assert(camera.find('transform').find('look_at').get('up') == [0, 1, 0])
     look_at = camera.find('transform').find('look_at')
     camera.find('transform').remove(look_at)
     camera.find('transform').add(Look_At(origin=[1,1,1], target=[1,1,1], up=[0,1,0]))
@@ -177,7 +177,7 @@ def main():
     # better since we have hide objects inside happleseed_types
     scene = Scene()
     scene.add(happleseed.Factory('Frame','beauty', 
-        parms=(('resolution' ,[1920, 1080]),), #FIXME: not converted to string
+        parms=(('resolution' ,[1920, 1080]),),
         camera='renderCam2'))
     scene.add(happleseed.Factory('Camera', 'renderCam2', 
         parms=(('aspect_ratio',1), ), model="pinhole_camera"))
@@ -185,7 +185,7 @@ def main():
     assert(scene.find("frame"))
     assert(scene.find("camera"))
     assert(scene.find('camera').get('model') == 'pinhole_camera')
-    assert(scene.find('frame').get_by_name('resolution').get('value') == [1920, 1080]) # This is correct, but bug is there 
+    assert(scene.find('frame').get_by_name('resolution').get('value') == [1920, 1080]) 
 
     apple = happleseed.AppleSeed()
     # we don't bother
@@ -297,10 +297,10 @@ def main():
 
 
     # Debug with line number
-    counter = 1
-    for line in str(apple.project).split('\n'):
-        print str(counter) + "   " + line
-        counter += 1
+    # counter = 1
+    # for line in str(apple.project).split('\n'):
+    #     print str(counter) + "   " + line
+    #     counter += 1
 
     # Higher level should take care of a placement policy (xml schema)
     # to be really useful. How to make it happen? 
