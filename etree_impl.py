@@ -43,10 +43,6 @@ class Element(defaultdict):
                 continue
             if typename.startswith(self.text_token):
                 continue
-            # FIXME: HapsVal was a mistake
-            # if isinstance(children, collections.Iterable):
-                # continue
-                # yield children
             for child in children:
                 yield child 
 
@@ -132,9 +128,6 @@ class Element(defaultdict):
             # only children, not attributes
             if not typename.startswith(self.attribute_token)\
                 and typename == tag:
-                # This is special case for HpasVal TODO: Make it more natural
-                if  type(self[typename][0]) in (type(1), type(1.0)):
-                    return self[typename]
                 return self[typename][0]
         return None
 
@@ -149,7 +142,6 @@ class Element(defaultdict):
         return None
 
     def remove(self, obj):
-        # obj = self.find(obj.get(name))
         typename = type(obj).__name__.lower()
         assert(obj in self[typename])
         index = self[typename].index(obj)
