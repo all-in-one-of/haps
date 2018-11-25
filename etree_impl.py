@@ -24,10 +24,6 @@ class Element(defaultdict):
             # Turn Haps object into its name:
             if isinstance(v, Element):
                 v = v[self.attribute_token+'name']
-            # Collapse iterrables to string:
-            # elif isinstance(v, collections.Iterable) and \
-            # not  isinstance(v, types.StringTypes):
-            #     v = ' '.join(map(str, v))
             self.__setattr__(k, v)
 
     def __setattr__(self, name, value):
@@ -173,13 +169,14 @@ class Element(defaultdict):
             """Keys to xml's attributes."""
             if not self.keys(): 
                 return ''
-            attributes_map  = ['{0}={1}'.format(
+            attributes_map  = ['{0}="{1}"'.format(
                 k.strip(self.attribute_token), 
                 str(self[k])) for k in self.keys()]
             return ' ' + ' '.join(attributes_map)
 
         text = ''
         attributes = _attributes_to_string()
+
         # Some keys are attributes (not returned by self.keys())...
         if self.keys() == super(Element, self).keys():
             etag = self.end_tag
@@ -194,7 +191,6 @@ class Element(defaultdict):
                     tag=self.tag,
                     end=self.end_tag)
 
-
         xml_token = self.element_template.format(
             whitespace=whitespace*indent,
             start=self.start_tag, 
@@ -208,7 +204,6 @@ class Element(defaultdict):
         for child in self:
             child.toxml(fileio, indent=indent+1)
 
-
         if etag == self.child_tag and not self.text:
             xml_token = self.element_template.format(
                 whitespace=whitespace*indent,
@@ -219,3 +214,9 @@ class Element(defaultdict):
                 text=''
                 )
             fileio.write(xml_token)
+
+        return fileio
+
+
+
+
