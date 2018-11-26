@@ -198,8 +198,8 @@ class Element(defaultdict):
         text  = ''
         if self.text:
             text = XMLTokens.text_template.format(whitespace=whitespace,
-                text=' '.join(map(str, self.text)), start=XMLTokens.start_tag, 
-                tag=self.tag, end=XMLTokens.end_tag, nl=new_line)
+                text=' '.join(map(str, self.text)), start=XMLTokens.parent_start_tag, 
+                tag=self.tag, end=XMLTokens.parent_end_tag, nl=new_line)
 
         xml_token = XMLTokens.element_template.format(whitespace=whitespace,
             start=XMLTokens.start_tag, tag=self.tag, attrib=attributes, end=etag, 
