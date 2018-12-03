@@ -73,17 +73,9 @@ class Alpha(HapsVal):
 
 class Parameter(HapsObj):
     def __init__(self, name, value=None):
-        # super(Parameter, self).__init__(name, value=value)
         self.__setattr__('name', name)
         if value:
             self.__setattr__('value', value)
-
-    # def __setattr__(self, name, value):
-    #     if isinstance(value, collections.Iterable) and \
-    #     not  isinstance(value, types.StringTypes):
-    #         value = ' '.join(map(str, value))
-    #     super(Parameter, self).__setattr__('@value', value)
-
 
 
 class Parameters(HapsObj):
@@ -165,7 +157,6 @@ class Values(HapsVal2):
 
 class Matrix(HapsVal2):
     identity = (1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1)
-    # identity = [1.0/1000.1 for x in range(16)]
     def __init__(self, m=None):
         if not m: m = self.identity
         assert(len(m) == 16)
