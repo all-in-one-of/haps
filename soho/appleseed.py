@@ -199,14 +199,13 @@ apple.scene.add(camera)
 for obj in soho.objectList('objlist:instance'):
     object_ = sohog.SohoGeometry(obj.getName(), now)
     object_.tesselate({'geo:convstyle':'lod', 'geo:triangulate':True})
-    filename = obj.getName().replace("/", "_")
-    filename = os.path.join(geopath, filename)
-    object_.save(filename + ext, None)
+    objectname = obj.getName().replace("/", "_")
+    object_.save(os.path.join(geopath, objectname) + ext, None)
 
     xform = []
     obj.evalFloat("space:world", now, xform)
-    apple.Assembly().insert('MeshObject', obj.getName(), 
-        filename=filename+ext,
+    apple.Assembly().insert('MeshObject', objectname, 
+        filename=objectname+ext,
         xform=haps.Matrix(xform))
 
 print apple.project
