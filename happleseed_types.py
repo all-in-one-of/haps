@@ -26,11 +26,9 @@ def ThinLensCamera(name, **kwargs):
 def PinholeCamera(name, **kwargs):
     camera = haps.Camera(name=name, model='pinhole_camera')
     camera.add_parms([
-        ("shutter_open_time", 0.0),
+        ("shutter_open_time", '0.0'),
         ("shutter_close_time",   1.0),
-        ("film_dimensions", None),
-        ("film_width", 1280), 
-        ("film_height", 720),
+        ("film_dimensions", '1280 720'),
         ("aspect_ratio", 1),
         ("focal_length", 40), 
         ("horizontal_fov", 45),
