@@ -2,8 +2,8 @@ import collections, types
 from collections import defaultdict
 
 class XMLTokens(object):
-    text_template    ='{nl}{whitespace}{text}{nl}{whitespace}{start}{tag}{end}'
-    element_template = '{whitespace}{start}{tag}{attrib}{end}{text}{nl}'
+    text_template    ='{nl}{wh}{text}{nl}{wh2}{start}{tag}{end}'
+    element_template = '{wh}{start}{tag}{attrib}{end}{text}{nl}'
     start_tag = '<'
     end_tag   = '/>'
     parent_end_tag = '>'
@@ -171,9 +171,18 @@ class Element(defaultdict):
         :parm fileio:       Writeable file-like object (file object, StringIO, sys.stdout etc)
         :parm pretty_print: print with new lines and tabs (default True)
         :parm indent:       Initial indent for pretty print (defualt 0)
-        :parm whitespace:   Whitespace used in pretty print (default 4* ' ')
         :returns:           fileio object
         """
+        def whitespace(level, indent=4, whs=' ', pprint=True):
+            if pretty_print:
+                return whs * indent * level
+            return whs
+
+        def trim_lines(items, length=4, lines=[]):
+            lines += [' '.join(map(str, items[start:start+length])) 
+                for start in range(0, len(items), length)]
+            return lines
+
         def _attributes_to_string():
             attributes_map = ['{0}="{1}"'.format(
                 k.strip(self.attribute_token), 
@@ -181,15 +190,10 @@ class Element(defaultdict):
             return ' ' + ' '.join(attributes_map)
 
         attributes = _attributes_to_string() if self.keys() else ''
+        new_line   = '' if not pretty_print else '\n'
+        pp = pretty_print
 
-        if pretty_print:
-            new_line   = '\n'
-            whitespace = ' ' * indent * _level
-        else:
-            new_line   = ''
-            whitespace = ''
-
-        # Some keys aren't attributes (not returned by self.keys())...
+        # Keys not returned by self.keys() are xml attributes
         if self.keys() == super(Element, self).keys():
             etag = XMLTokens.end_tag
         else:
@@ -197,11 +201,13 @@ class Element(defaultdict):
 
         text  = ''
         if self.text:
-            text = XMLTokens.text_template.format(whitespace=whitespace,
-                text=' '.join(map(str, self.text)), start=XMLTokens.parent_start_tag, 
+            text = '{}{}'.format(new_line, whitespace(_level+1, indent=indent, pprint=pp))
+            text = text.join(trim_lines(self.text, length=4))
+            text = XMLTokens.text_template.format(wh=whitespace(_level+1, indent=indent, pprint=pp), 
+                text=text, start=XMLTokens.parent_start_tag, wh2=whitespace(_level, indent=indent, pprint=pp),
                 tag=self.tag, end=XMLTokens.parent_end_tag, nl=new_line)
 
-        xml_token = XMLTokens.element_template.format(whitespace=whitespace,
+        xml_token = XMLTokens.element_template.format(wh=whitespace(_level, indent=indent, pprint=pp),
             start=XMLTokens.start_tag, tag=self.tag, attrib=attributes, end=etag, 
             text=text, nl=new_line)
 
@@ -214,7 +220,7 @@ class Element(defaultdict):
                 child.toxml(fileio, indent=indent, _level=_level+1)
 
         if etag == XMLTokens.parent_end_tag and not self.text:
-            xml_token = XMLTokens.element_template.format(whitespace=whitespace,
+            xml_token = XMLTokens.element_template.format(wh=whitespace(_level, indent=indent, pprint=pp),
                 start=XMLTokens.parent_start_tag, tag=self.tag, end=XMLTokens.parent_end_tag, attrib='',
                 text='', nl=new_line)
             # Close tag
