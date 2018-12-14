@@ -33,6 +33,17 @@ class Project(HapsObj):
     _children = []
     def __init__(self):
         self.__setattr__("format_revision", FORMAT_REVISION)
+        self.add(Search_Paths().add(Search_Path('geometry')))
+
+class Search_Paths(HapsObj):
+    pass
+
+
+class Search_Path(HapsVal2):
+    pretty_print = False
+    def __init__(self, values):
+        super(Search_Path, self).__init__(values)
+        # self.__setattr__(self.pretty_print, False)
 
 
 class Scene(HapsObj):
