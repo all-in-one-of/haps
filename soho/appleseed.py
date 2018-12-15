@@ -7,8 +7,8 @@ import sohog
 import hou
 from soho import SohoParm
 
-geopath = os.getcwd()
-ext     = ".obj" # TODO replace with .appleseed
+GEOPATH   = os.path.join(os.getcwd(), 'tmp')
+EXTENSION = ".obj" # TODO replace with .appleseed
 
 # IFDhooks.call("pre_ifdGen")
 clockstart = time.time()
@@ -164,49 +164,79 @@ FPS = soho.getDefaultedFloat('state:fps', [24])[0]
 FPSinv = 1.0 / FPS
 
 import happleseed
+import happleseed_types
 import happleseed_types as types
 import haps
+reload(happleseed)
+reload(happleseed_types)
 reload(types)
+reload(haps)
 
 apple = happleseed.AppleSeed()
 apple.Scene()
 apple.Assembly()
 scene = apple.scene
 
-camera_parms = {'film_width':         cam.getDefaultedInt('res', now, [0,0])[0]
-            ,   'film_height':        cam.getDefaultedInt('res', now, [0,0])[1]
+def get_obj_filename(obj, ext=EXTENSION):
+    objectname = obj.getName().replace("/", "_")[1:] + EXTENSION
+    return os.path.join(GEOPATH, objectname)
+
+
+camera_parms = {'film_dimensions': (cam.getDefaultedInt('res', now, [0,0])[0],
+                                    cam.getDefaultedInt('res', now, [0,0])[1])
+    
             ,   'shutter_open_time':  0.0 # FIXME (in mantra this lives on rop)
             ,   'shutter_close_time': cam.getDefaultedFloat('shutter', now, [0])[0]
             ,   'aspect_ratio':       cam.getDefaultedFloat('aspect', now, [1])[0]
-            ,   'focal_length':       cam.getDefaultedFloat('focal', now, [50])[0]
+            ,   'focal_length':       cam.getDefaultedFloat('focal', now, [24])[0]
             # ,   'horizontal_fov':     cam.getDefaultedFloat('shutter', now, [0])[0]
             ,   'near_z':             cam.getDefaultedFloat('near', now, [0.1])[0]
     }
 
 
-def create_camera(cam, now):
-    camera = types.PinholeCamera(cam.getName(), **camera_parms)
-    xform  = []
-    if cam.evalFloat("space:world", now, xform):
-        camera.add(haps.Transform(time=now).add(
-            haps.Matrix(xform)))
-    return camera
+# Pinhole camera
+camera = types.PinholeCamera(cam.getName(), **camera_parms)
+xform  = []
+if cam.evalFloat("space:world", now, xform):
+    camera.add(haps.Transform(time=now).add(
+        haps.Matrix(xform)))
 
-
-camera = create_camera(cam, now)
 apple.scene.add(camera)
 
+
+# Basic objects
 for obj in soho.objectList('objlist:instance'):
-    object_ = sohog.SohoGeometry(obj.getName(), now)
-    object_.tesselate({'geo:convstyle':'lod', 'geo:triangulate':True})
-    objectname = obj.getName().replace("/", "_")
-    object_.save(os.path.join(geopath, objectname) + ext, None)
+    soppath = obj.getDefaultedString('object:soppath', now, [''])[0]
+    gdp     = sohog.SohoGeometry(soppath, now)
+    if gdp.Handle < 0:
+        sys.stderr.write("No geometry to reach in {}!".format(obj.getName()))
+        continue
+
+    gdp.tesselate({'geo:convstyle':'lod', 'geo:triangulate':True})
+
+    filename = get_obj_filename(obj)
+    options = { "geo:saveinfo":False, 
+                "json:textwidth":0, 
+                "geo:skipsaveindex":True, 
+                'savegroups':True, 
+                'geo:savegroups':True}
+
+    if not gdp.save(filename, options):
+        sys.stderr.write("Can't save geometry from {} to {}".format(soppath, filename))
+        continue
 
     xform = []
     obj.evalFloat("space:world", now, xform)
-    apple.Assembly().insert('MeshObject', objectname, 
-        filename=objectname+ext,
-        xform=haps.Matrix(xform))
+    apple.Assembly().insert('MeshObject', obj.getName(), 
+        filename=filename, xform=haps.Matrix(xform))
+
+
+apple.Output().insert('Frame', 'beauty', resolution=camera_parms['film_dimensions'], 
+    crop_window=(0,0,camera_parms['film_dimensions'][0], camera_parms['film_dimensions'][1]),
+    camera=camera.get('name'))
+
+apple.Config().insert('FinalConfiguration', 'final')
+apple.Config().insert('InteractiveConfiguration', 'interactive')
 
 print apple.project
 
