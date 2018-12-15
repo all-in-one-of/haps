@@ -123,7 +123,8 @@ def MeshObject(name, filename, **kwargs):
         else haps.Matrix()
     object_ = haps.Object(name, model='mesh_object')
     object_.add(haps.Parameter('filename', filename))
-    obj_inst = haps.Object_Instance(name+'_inst', object=object_)
+    obj_name = '.'.join([object_.get('name'), object_.get('name')])
+    obj_inst = haps.Object_Instance(name+'_inst', object=object_.get('name')+".group1")
     if not kwargs.get('xforms'):
         obj_inst.add(haps.Transform().add(xform))
     else:
@@ -131,7 +132,7 @@ def MeshObject(name, filename, **kwargs):
     return object_, obj_inst
 
 
-def InteractiveConfiguration(name='base_interactive', **kwargs):
+def InteractiveConfiguration(name='interactive', **kwargs):
     conf = haps.Configuration(name, base='base_interactive')
     conf.add_parms([
             ("lighting_engine", "pt"),
@@ -152,6 +153,34 @@ def InteractiveConfiguration(name='base_interactive', **kwargs):
     return conf
 
 
+def FinalConfiguration(name='final', **kwargs):
+    conf = haps.Configuration(name, base='base_final')
+    conf.add_parms([
+            ("lighting_engine", "pt"),
+            ("passes", "1"),
+            ("pixel_renderer", "uniform"),
+            ("sampling_mode", "qmc"),
+            ("shading_result_framebuffer", "ephemeral")])
+
+    conf.add(haps.Parameters('adaptive_pixel_renderer').add_parms([
+        ('max_samples', 256),
+        ('min_samples', 16),
+        ('quality', 2.0)]))
+
+    conf.add(haps.Parameters('pt').add_parms([
+                ("dl_light_samples", "1.000000"),
+                ("dl_low_light_threshold", "0.000000"),
+                ("enable_caustics", "true"),
+                ("enable_dl", "true"),
+                ("enable_ibl", "true"),
+                ("ibl_env_samples", "1.000000"),
+                ("max_bounces", "-1"),
+                ("max_diffuse_bounces", "-1"),
+                ("max_glossy_bounces", "-1"),
+                ("max_specular_bounces", "-1"),
+                ("next_event_estimation", "true"),
+                ("rr_min_path_length", "6")]))
+    return conf
 
 def PhysicalSurfaceShader(name, lighting_samples=1):
     shader = haps.Surface_Shader(name, model='physical_surface_shader')
