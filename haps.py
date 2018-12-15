@@ -33,7 +33,7 @@ class Project(HapsObj):
     _children = []
     def __init__(self):
         self.__setattr__("format_revision", FORMAT_REVISION)
-        self.add(Search_Paths().add(Search_Path('geometry')))
+        # self.add(Search_Paths().add(Search_Path('geometry')))
 
 class Search_Paths(HapsObj):
     pass
