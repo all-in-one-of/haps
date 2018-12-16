@@ -78,7 +78,7 @@ class Color(HapsObj):
     pass
 
 
-class Alpha(HapsVal):
+class Alpha(HapsVal2):
     pass
 
 
