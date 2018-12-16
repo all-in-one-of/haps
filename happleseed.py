@@ -76,7 +76,7 @@ class AppleSeed(object):
                 objects = [objects]
             if replace:
                 for obj in objects:
-                    duplicate =self.parent.get_by_name(obj.get('name'))
+                    duplicate =self.parent.get_by_name(obj.get('name', False))
                     if duplicate:
                         self.parent.remove(duplicate)
             self.parent.add(objects)
