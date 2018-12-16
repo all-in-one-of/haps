@@ -117,19 +117,38 @@ def TransformBlur(obj, xforms):
     return obj
 
 def MeshObject(name, filename, **kwargs):
-    """Create mesh object adn its instance with transformation applied.
-    """
+    """Create mesh object and its instance with xform  applied.
+	:parm name:     Name of the object
+	:parm filename: Path to file object is saved in
+	:parm kwargs:   dict of optional parameters: 
+					xform object (tuple of floats of length 16)
+					or xforms (series of xform object) suitable
+					for creating series of transformation blur.
+	"""
     xform = kwargs.get('xform') if kwargs.get('xform')\
         else haps.Matrix()
-    object_ = haps.Object(name, model='mesh_object')
-    object_.add(haps.Parameter('filename', filename))
-    obj_name = '.'.join([object_.get('name'), object_.get('name')])
-    obj_inst = haps.Object_Instance(name+'_inst', object=object_.get('name')+".group1")
+    obj = haps.Object(name, model='mesh_object')
+    obj.add(haps.Parameter('filename', filename))
+    obj_name = '.'.join([obj.get('name'), '0']) #FIXME: is it general or only for obj without groups?
+    obj_inst = haps.Object_Instance(name+'_inst', object=obj_name)
+    # xforms
     if not kwargs.get('xforms'):
         obj_inst.add(haps.Transform().add(xform))
     else:
         obj_inst = TransformBlur(obj_inst, kwargs.get('xforms'))
-    return object_, obj_inst
+
+    # materials:
+    if not kwargs.get('material'):
+        material = 'default_material'
+    else:
+        material = kwargs.get('material')
+
+    obj_inst.add(haps.Assign_Material(None, 
+        slot='default', 
+        side='front',
+        material=material))
+
+    return obj, obj_inst
 
 
 def InteractiveConfiguration(name='interactive', **kwargs):
@@ -186,6 +205,31 @@ def PhysicalSurfaceShader(name, lighting_samples=1):
     shader = haps.Surface_Shader(name, model='physical_surface_shader')
     shader.add(haps.Parameter('lighting_samples', lighting_samples))
     return shader
+
+
+def DefaultLambertMaterial(name, color=[.5,.5,.5]):
+    ''''''
+    rgb = haps.Color(name+'_color')
+    rgb.add_parms([
+        ('multiplier', 1.0),
+        ('wavelength_range', '400.0 700.0'),
+        ('color_space', 'linear_rgb')])
+
+    rgb.add(haps.Values(color))
+    rgb.add(haps.Alpha([1.0]))
+
+    bsdf = haps.Bsdf(name+'_bsdf', 
+        model='lambertian_brdf').add_parms([
+        ('reflectance', rgb.get('name'))])
+
+    shader   = PhysicalSurfaceShader(name+"_shader", lighting_samples=1)
+    material = haps.Material(name, model='generic_material')
+    material.add_parms([
+            ('bsdf', bsdf.get('name')),
+            ('surface_shader', shader.get('name'))])
+    return rgb, bsdf, shader, material
+
+
 
 
 def DisneyMaterialLayer(name, layer_number, **kwargs):
