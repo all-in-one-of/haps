@@ -125,13 +125,14 @@ def MeshObject(name, filename, **kwargs):
 					or xforms (series of xform object) suitable
 					for creating series of transformation blur.
 	"""
-    xform = kwargs.get('xform') if kwargs.get('xform')\
-        else haps.Matrix()
     obj = haps.Object(name, model='mesh_object')
     obj.add(haps.Parameter('filename', filename))
     obj_name = '.'.join([obj.get('name'), '0']) #FIXME: is it general or only for obj without groups?
     obj_inst = haps.Object_Instance(name+'_inst', object=obj_name)
+
     # xforms
+    xform = kwargs.get('xform') if kwargs.get('xform')\
+        else haps.Matrix()
     if not kwargs.get('xforms'):
         obj_inst.add(haps.Transform().add(xform))
     else:
@@ -144,9 +145,9 @@ def MeshObject(name, filename, **kwargs):
         material = kwargs.get('material')
 
     obj_inst.add(haps.Assign_Material(None, 
-        slot='default', 
-        side='front',
-        material=material))
+        slot='default', side='front', material=material))
+    obj_inst.add(haps.Assign_Material(None, 
+        slot='default', side='back', material=material))
 
     return obj, obj_inst
 
@@ -270,4 +271,19 @@ def DisneyMaterial(name, layers=1, **kwargs):
         name = 'layer%i' % layer
         material.add(DisneyMaterialLayer(name, layer, **kwargs))
     return shader, material
+
+def PointLight(name, **kwargs):
+    light = haps.Light(name, model='point_light')
+    light.add_parms([
+        ('cast_indirect_light', True),
+        ('exposure', '0.0'),
+        ('importance_multiplier', 1.0),
+        ('intensity', 1.0),
+        ('intensity_multiplier', 1.0)
+        ])
+    light = haps.update_parameters(light, **kwargs)
+    xform = kwargs.get('xform') if kwargs.get('xform') \
+        else haps.Matrix()
+    light.add(haps.Transform().add(xform))
+    return light
 
