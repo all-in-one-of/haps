@@ -55,7 +55,8 @@ def main():
                     Values([0.1, 1, 2.0])))
 
     assert(assembly.find('color').get('name') == 'red')
-    assert(str(assembly.find('color').find('alpha')) == '1')
+    # print str(assembly.find('color').find('alpha'))
+    assert(assembly.find('color').find('alpha').data == [1])
     assert(assembly.find('color').find('values').data == [0.1, 1, 2.0])
 
     # Assemblies also seem to be instanceable
@@ -244,9 +245,10 @@ def main():
     assert(len(apple.scene.get_by_name('new_assembly')\
         .get_by_name('moving_box_inst').findall('transform')) == 5)
 
+ 
     # How to easiliy get to object instances?
     instances = [inst for inst in apple.scene.get_by_name("new_assembly")\
-        .findall('object_instance') if inst.get('object') == 'moving_box']
+        .findall('object_instance') if inst.get('object') == 'moving_box.0']
     assert(instances)
 
     # TODO: add easy duplicating (via deecopy) with auto renaming.
