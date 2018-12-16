@@ -234,8 +234,11 @@ for obj in soho.objectList('objlist:instance'):
     apple.Assembly().insert('MeshObject', obj.getName(), 
         filename=filename, xform=haps.Matrix(xform))
 
-
-
+###### Basic lights ######################################
+for light in soho.objectList('objlist:light'):
+    xform = []
+    light.evalFloat('space:world', now, xform)
+    apple.Assembly().insert('PointLight', light.getName(), xform=haps.Matrix(xform))
 
 ############ - Frame - basics - ##################################
 apple.Output().insert('Frame', 'beauty', resolution=camera_parms['film_dimensions'], 
