@@ -176,9 +176,10 @@ apple = happleseed.AppleSeed()
 apple.Scene()
 apple.Assembly()
 scene = apple.scene
+assembly =apple.assembly
 
-def get_obj_filename(obj, ext=EXTENSION):
-    objectname = obj.getName().replace("/", "_")[1:] + EXTENSION
+def get_obj_filename(obj, group='', ext=EXTENSION):
+    objectname = obj.getName().replace("/", "_")[1:] + group + ext
     return os.path.join(GEOPATH, objectname)
 
 
@@ -194,17 +195,17 @@ camera_parms = {'film_dimensions': (cam.getDefaultedInt('res', now, [0,0])[0],
     }
 
 
-# Pinhole camera
+##### CAMERA - Pinhole camera - for now ###################
 camera = types.PinholeCamera(cam.getName(), **camera_parms)
 xform  = []
 if cam.evalFloat("space:world", now, xform):
     camera.add(haps.Transform(time=now).add(
         haps.Matrix(xform)))
 
-apple.scene.add(camera)
+scene.add(camera)
+assembly.add(types.DefaultLambertMaterial('default_material'))
 
-
-# Basic objects
+##### Basic objects - /obj level - #############################
 for obj in soho.objectList('objlist:instance'):
     soppath = obj.getDefaultedString('object:soppath', now, [''])[0]
     gdp     = sohog.SohoGeometry(soppath, now)
@@ -212,15 +213,18 @@ for obj in soho.objectList('objlist:instance'):
         sys.stderr.write("No geometry to reach in {}!".format(obj.getName()))
         continue
 
-    gdp.tesselate({'geo:convstyle':'lod', 'geo:triangulate':True})
-
-    filename = get_obj_filename(obj)
+    parts = gdp.partition('geo:partattrib', 'shop_materialpath')
+	#gdp.tesselate({'geo:convstyle':'lod', 'geo:triangulate':True})
     options = { "geo:saveinfo":False, 
                 "json:textwidth":0, 
                 "geo:skipsaveindex":True, 
                 'savegroups':True, 
                 'geo:savegroups':True}
 
+    # for group, part in parts.items():
+    #     group = group.replace('/', '_')
+    # sys.stderr.write(filename)
+    filename = get_obj_filename(obj, '')
     if not gdp.save(filename, options):
         sys.stderr.write("Can't save geometry from {} to {}".format(soppath, filename))
         continue
@@ -231,12 +235,18 @@ for obj in soho.objectList('objlist:instance'):
         filename=filename, xform=haps.Matrix(xform))
 
 
+
+
+############ - Frame - basics - ##################################
 apple.Output().insert('Frame', 'beauty', resolution=camera_parms['film_dimensions'], 
     crop_window=(0,0,camera_parms['film_dimensions'][0], camera_parms['film_dimensions'][1]),
     camera=camera.get('name'))
 
+
+########## - Render configuration - ######################################
 apple.Config().insert('FinalConfiguration', 'final')
 apple.Config().insert('InteractiveConfiguration', 'interactive')
+
 
 print apple.project
 
