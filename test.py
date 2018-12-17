@@ -1,5 +1,6 @@
 from haps import *
 from haps_types import FORMAT_REVISION
+import json, time
 
 """ 
     Experiments with API design for Appleseed for Houdini.
@@ -10,7 +11,7 @@ def splitXMLtoWords(xml, whitespace='\n'):
         str(xml).split(whitespace) if word != ""]
 
 def main():
-
+    clockstart = time.time()
     minimal_project = ['<project format_revision="%i">' % FORMAT_REVISION, '<scene>', 
         '<assembly name="assembly"/>', '</scene>', '</project>']
 
@@ -20,7 +21,7 @@ def main():
     assembly = Assembly('assembly')
     scene.add(assembly)
     project.add(scene)
-    #assert(splitXMLtoWords(str(project)) == minimal_project)
+    assert(splitXMLtoWords(str(project)) == minimal_project)
 
     # __init__ arguments are always XML attributes, first argument is always a name:
     object1  = Object(name='torus', model='mesh_object').add(Parameter('filename', 'torus.obj'))
@@ -55,7 +56,6 @@ def main():
                     Values([0.1, 1, 2.0])))
 
     assert(assembly.find('color').get('name') == 'red')
-    # print str(assembly.find('color').find('alpha'))
     assert(assembly.find('color').find('alpha').data == [1])
     assert(assembly.find('color').find('values').data == [0.1, 1, 2.0])
 
@@ -294,26 +294,14 @@ def main():
         .get('value')
     assert(max_bounces == '-1')
 
-    # better xml perhpas 
-    # apple.project.toxml(sys.stdout)
-    # print apple.project.tostring()
-
-
     # Debug with line number
     counter = 1
     for line in str(apple.project).split('\n'):
         print str(counter) + "   " + line
         counter += 1
 
-    # Higher level should take care of a placement policy (xml schema)
-    # to be really useful. How to make it happen? 
-    # Callable()s could specifily their details with attributes? 
-    # Also should Python object contain its schema or should be deduced 
-    # from json/xml (I usually like this approach)?
-
-    # with open('test.appleseed', 'w') as file:
-    #     file.write(apple.project.toxml())
-    #     file.close()
+    print('Generation time: %g seconds' % (time.time() - clockstart))
+   
 
     # Play with validation:
     try:
