@@ -1,4 +1,4 @@
-from haps_types import HapsObj, HapsVal, HapsVal2, FORMAT_REVISION
+from haps_types import HapsObj, HapsVal, FORMAT_REVISION
 import collections
 import types
     
@@ -32,18 +32,16 @@ def update_parameters(obj, **kwargs):
 class Project(HapsObj):
     _children = []
     def __init__(self):
-        self.__setattr__("format_revision", FORMAT_REVISION)
-        # self.add(Search_Paths().add(Search_Path('geometry')))
+        super(Project, self).__init__()
+        self.set("format_revision", FORMAT_REVISION)
 
 class Search_Paths(HapsObj):
     pass
 
-
-class Search_Path(HapsVal2):
+class Search_Path(HapsVal):
     pretty_print = False
     def __init__(self, values):
         super(Search_Path, self).__init__(values)
-        # self.__setattr__(self.pretty_print, False)
 
 
 class Scene(HapsObj):
@@ -64,7 +62,8 @@ class Assembly_Instance(HapsObj):
 
 class Transform(HapsObj):
     def __init__(self, time=0):
-        self.__setattr__('time', time)
+        super(Transform, self).__init__()
+        self.set('time', time)
 
 class Object(HapsObj):
     pass
@@ -78,20 +77,25 @@ class Color(HapsObj):
     pass
 
 
-class Alpha(HapsVal2):
-    pass
+class Alpha(HapsVal):
+    def __init__(self, values):
+        super(Alpha, self).__init__(values)
+        self.set('text', values)
+    
 
 
 class Parameter(HapsObj):
     def __init__(self, name, value=None):
-        self.__setattr__('name', name)
+        super(Parameter, self).__init__()
+        self.set('name', name)
         if value:
-            self.__setattr__('value', value)
+            self.set('value', value)
 
 
 class Parameters(HapsObj):
     def __init__(self, name):
-        self.__setattr__('name', name)
+        super(Parameters, self).__init__()
+        self.set('name', name)
 
 
 class Bsdf(HapsObj):
@@ -162,11 +166,14 @@ class Look_At(HapsObj):
     pass
 
 
-class Values(HapsVal2):
-    pass
+class Values(HapsVal):
+    def __init__(self, values):
+        super(Values, self).__init__(values)
+        self.set('text', values)
+    
 
 
-class Matrix(HapsVal2):
+class Matrix(HapsVal):
     identity = (1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1)
     def __init__(self, m=None):
         if not m: m = self.identity

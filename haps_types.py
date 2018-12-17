@@ -8,24 +8,11 @@ import logging, sys
 logging.basicConfig(stream=sys.stderr, level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
-class HapsVal(collections.Sequence):
-    """HapsVal is a special case in XML world. This is non attribute / numeric varible 
-        text values XML tag.
-    """
-    def __init__(self, values):
-        self.data = []
-        super(HapsVal, self).__init__()
-        for v in values: self.data.append(v)
-    def __getitem__(self, i):
-        return self.data[i]
-    def __len__(self):
-        return len(self.data)
-    def __repr__(self):
-        return ' '.join(map(str, self.data))
 
-class HapsVal2(Element):
+class HapsVal(Element):
     def __init__(self, values):
-        self['#'] = values
+        super(HapsVal, self).__init__()
+        self.set('text', values)
 
 
 class HapsObj(Element):
@@ -60,8 +47,7 @@ class HapsObj(Element):
         return self
 
     def get_by_type(self, typename):
-        assert(typename in self.keys())
-        return self[typename]
+        return self.findall(typename)
 
     def get_by_name(self, name, typename=None):
         """ Search for an item named 'name'.
@@ -70,11 +56,11 @@ class HapsObj(Element):
         if typename:
             children = self.findall(typename)
             for child in children:
-                if child.get('name') == name:
+                if child.get('name', False) == name:
                     return child
         else: 
             for child in list(self):               
-                if child.get('name') == name:
+                if child.get('name', False) == name:
                     return child
 
         return None
