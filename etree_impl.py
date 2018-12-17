@@ -1,7 +1,9 @@
 import collections, types
-from collections import defaultdict
+from collections import defaultdict, OrderedDict
 
-class XMLTokens(object):
+HAPS_DEBUG=True
+
+class XMLTokens(defaultdict):
     text_template    ='{nl}{wh}{text}{nl}{wh2}{start}{tag}{end}'
     element_template = '{wh}{start}{tag}{attrib}{end}{text}{nl}'
     start_tag = '<'
@@ -10,38 +12,38 @@ class XMLTokens(object):
     parent_start_tag='</'
 
 
-class Element(defaultdict):
+class Element(OrderedDict):
     """Minimal implementation of xml.ElementTree API
        based on Python native dictionary.
     """
     attribute_token = '@'
-    text_token      = '#'
-
+    
     def __init__(self, name=None, **kwargs):
         """Init object with attribs from kwargs."""
+        super(Element, self).__init__()
+
+        self[self.attribute_token] = {}
+
         if name:
-            self.__setattr__('name', name)
+            self.attributes['name'] = name
+
         for k,v in kwargs.items():
             # Turn Haps object into its name:
             if isinstance(v, Element):
-                v = v[self.attribute_token+'name']
-            self.__setattr__(k, v)
-
-    def __setattr__(self, name, value):
-        """Maps Python object attribs to xml attribs via @notation in json."""
-        if name == self.text_token:
-            super(Element, self).__setitem__(self.text_token, value)
-        else:
-            super(Element, self).__setitem__(self.attribute_token+name, value)
+                if 'name' in v.attributes:
+                    v = v.attributes['name']
+                elif HAPS_DEBUG:
+                    raise Exception('Attribute "%s" \
+                        not present on object %s' % ('name', v))
+            self[self.attribute_token][k] = v
 
     def __iter__(self):
-        for typename, children in self.items():
-            if typename.startswith(self.attribute_token):
+        for key, values in [(k, self[k]) for k \
+            in super(Element, self).__iter__()]:
+            if key == self.attribute_token:
                 continue
-            if typename.startswith(self.text_token):
-                continue
-            for child in children:
-                yield child 
+            for v in values:
+                yield v 
 
     def __repr__(self):
         """ Major functionality of this class. Using base clase to tostring() method
@@ -50,14 +52,18 @@ class Element(defaultdict):
         return self.tostring()
 
     @property
+    def attributes(self):
+        return self[self.attribute_token]
+
+    @property
     def tag(self):
         return type(self).__name__.lower()
 
     @property 
     def text(self):
-        if self.text_token in super(Element, self).keys():
-            return self[self.text_token]
-        return
+        if 'text' in self[self.attribute_token]:
+            return self[self.attribute_token]['text']
+        return ''
 
     @property
     def data(self):
@@ -69,19 +75,9 @@ class Element(defaultdict):
         :parm:   obj is an object of the same type as self.
         :return: self 
         """
-        #FIXME:
-        from haps_types import HapsVal
-
-        def _add_value(v):
-            typename = type(obj).__name__.lower()
-            self[typename] = v
-
-        if isinstance(obj, HapsVal):
-            _add_value(obj)
-            return self
-
         # We allow to pass Nones here:
         if obj == None: return self
+
         assert(isinstance(obj, Element))
         typename = type(obj).__name__.lower()
 
@@ -100,44 +96,40 @@ class Element(defaultdict):
         [self.append(x) for x in objs]
         return self
 
-    def get(self, name, raise_on_fail=True):
-        """Get local (self element's) attribute.
+    def get(self, attribute, raise_on_fail=True):
+        """Get attribute from self .
 
-        :parm name:          Name of an attribute to return
+        :parm attribute:     Name of an attribute to return
         :parm raise_on_fail: If True nonexsting attribute query will raise an Exception
-        :returns:            Sting with attribute value or None (with raise_on_fail=False)
+        :returns:            Attribute value or None (with raise_on_fail=False)
         """
-        attr = self.attribute_token+name
-        if attr in self.keys():
-            return self[attr]
+        if attribute in self.attributes:
+            return self[self.attribute_token][attribute]
         elif raise_on_fail:
-            raise Exception('Attribute "%s" not present on object %s' % (name, self))
+            raise Exception('Attribute "%s" not present on object %s' % (attribute, self))
         return None
 
-    def find(self, tag):
-        """Find first child element of type name/tag. Only 
+    def find(self, tag, _all=False):
+        """Find first child element of type: tag. Only 
         first element of a type 'tag' will be returend. Use findall
         to search for multiply elements of the 'tag'.
 
         :parm tag: the name of the type of element type to be returned.
+        "returns : First child of type 'tag'.
         """
-        for typename, children in self.items():
-            # only children, not attributes
-            if not typename.startswith(self.attribute_token)\
-                and typename == tag:
-                return self[typename][0]
+        if tag in self and tag != self.attribute_token:
+            if len(self[tag]):
+                return self[tag] if _all else self[tag][0]
         return None
 
     def findall(self, tag):
         """Find all children elements of a given type (tag).
         :parm tag: the name of the type of elements to be returned.
         """
-        for typename, children in self.items():
-            # only children, not attributes
-            if not typename.startswith(self.attribute_token)\
-                and typename == tag:
-                return self[typename]
-        return None
+        children = self.find(tag, _all=True)
+        if children:
+            return children
+        return []
 
     def remove(self, obj):
         """Remove element from a children list."""
@@ -149,11 +141,13 @@ class Element(defaultdict):
     def keys(self):
         """Return a list of attributes of the element."""
         return [key for key in super(Element, self).keys() \
-            if key.startswith(self.attribute_token)]
+            if key != self.attribute_token]
 
     def set(self, key, value):
         """Sets a value of the attribute. """
-        self.__setattr__(key, value)
+        if not self.attribute_token in self:
+            self[self.attribute_token] = {}
+        self[self.attribute_token][key] = value
 
     def tostring(self, pretty_print=True):
         """Returns xml string of current element and its children."""
@@ -184,17 +178,16 @@ class Element(defaultdict):
             return lines
 
         def _attributes_to_string():
-            attributes_map = ['{0}="{1}"'.format(
-                k.strip(self.attribute_token), 
-                str(self[k])) for k in self.keys()]
+            attributes_map = ['{}="{}"'.format(k,v) for k,v in self.attributes.items()
+                if k != 'text'] 
             return ' ' + ' '.join(attributes_map)
 
-        attributes = _attributes_to_string() if self.keys() else ''
+        attributes = _attributes_to_string() if self.attributes else ''
         new_line   = '' if not pretty_print else '\n'
         pp = pretty_print
 
-        # Keys not returned by self.keys() are xml attributes
-        if self.keys() == super(Element, self).keys():
+    
+        if not list(self) and not self.text:
             etag = XMLTokens.end_tag
         else:
             etag = XMLTokens.parent_end_tag
