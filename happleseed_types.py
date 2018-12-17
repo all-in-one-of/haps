@@ -28,10 +28,9 @@ def PinholeCamera(name, **kwargs):
     camera.add_parms([
         ("shutter_open_time", '0.0'),
         ("shutter_close_time",   1.0),
-        ("film_dimensions", '1280 720'),
+        ("film_dimensions", '0.01280 0.0720'),
         ("aspect_ratio", 1),
-        ("focal_length", 40), 
-        ("horizontal_fov", 45),
+        ("focal_length", 0.035), 
         ("near_z",  -0.001)])
     camera = haps.update_parameters(camera, **kwargs)
     return camera

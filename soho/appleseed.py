@@ -189,9 +189,8 @@ camera_parms = {'film_dimensions': (cam.getDefaultedInt('res', now, [0,0])[0],
             ,   'shutter_open_time':  0.0 # FIXME (in mantra this lives on rop)
             ,   'shutter_close_time': cam.getDefaultedFloat('shutter', now, [0])[0]
             ,   'aspect_ratio':       cam.getDefaultedFloat('aspect', now, [1])[0]
-            ,   'focal_length':       cam.getDefaultedFloat('focal', now, [24])[0]
-            # ,   'horizontal_fov':     cam.getDefaultedFloat('shutter', now, [0])[0]
-            ,   'near_z':             cam.getDefaultedFloat('near', now, [0.1])[0]
+            ,   'focal_length':       cam.getDefaultedFloat('focal', now, [24])[0] * 30
+            ,   'near_z':             cam.getDefaultedFloat('near', now, [0.1])[0] * -1
     }
 
 
@@ -250,8 +249,9 @@ apple.Output().insert('Frame', 'beauty', resolution=camera_parms['film_dimension
 apple.Config().insert('FinalConfiguration', 'final')
 apple.Config().insert('InteractiveConfiguration', 'interactive')
 
+with open('/tmp/aps.appleseed', 'w') as file:
+    file.write(str(apple.project))
 
-print apple.project
 
 
 
