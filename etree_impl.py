@@ -16,7 +16,7 @@ class Element(OrderedDict):
     """Minimal implementation of xml.ElementTree API
        based on Python native dictionary.
     """
-    attribute_token = '@'
+    attribute_token = '@attrib'
     
     def __init__(self, name=None, **kwargs):
         """Init object with attribs from kwargs."""
@@ -45,11 +45,14 @@ class Element(OrderedDict):
             for v in values:
                 yield v 
 
-    def __repr__(self):
+    def __str__(self):
         """ Major functionality of this class. Using base clase to tostring() method
             represents itself as a XML node / document.
         """
         return self.tostring()
+
+    def __repr__(self):
+        return super(Element, self).__repr__()
 
     @property
     def attributes(self):
