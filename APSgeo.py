@@ -1,4 +1,4 @@
-import struct, io 
+import struct, io, sys
 
 
 class BinaryMesh(io.BytesIO):
@@ -38,7 +38,7 @@ class BinaryMesh(io.BytesIO):
     def pack_double_array(self, array, coord=3):
         '''Pack array of doubles into binary string.'''
         assert(len(array)%coord == 0)
-        fmt    = 'I{coord}d'.format(coord=len(array))
+        fmt    = 'I {coord}d'.format(coord=len(array))
         bytes  = struct.pack(fmt, len(array)/coord, *array)
         return bytes
 
@@ -53,7 +53,7 @@ class BinaryMesh(io.BytesIO):
     def pack_primitives(self, prims):
         bytes = struct.pack('I', len(prims))
         for prim in prims:
-            fmt = 'H{verts}IH'.format(verts=3*prim[0])
+            fmt = 'H {verts}I H'.format(verts=3*prim[0])
             bytes += struct.pack(fmt, *prim)
         return bytes
 
@@ -62,20 +62,22 @@ class BinaryMesh(io.BytesIO):
 
 def main():
 
-    vertices = (-1,0,-1, -1,0,1, 1,0,1, 1,0,-1)
-    normals  = (1,1,1, 1,1,1, 1,1,1, 1,1,1, 1,1,1, 1,1,1)
-    uvs      = (0,0, 0,1, 0,1, 1,1, 1,0, 1,0)
+    vertices = (-1,0,-1, 1,0,-1, -1,0,1, 1,0,1)
+    normals  = [0,1,0]*4
+    uvs      = (0,0, 1,0, 1,1, 0,0)
     faces    = ((3,  0,0,0, 1,1,1, 2,2,2, 0), (3,  0,0,0, 3,3,3, 2,2,2, 0))
     group    = 'grid'
 
-    assert(isinstance(group, str))
-    assert(len(normals)%3  == 0) 
-    assert(len(vertices)%3 == 0)
-    assert(len(uvs)%2      == 0)
-    assert(len(uvs)/2      == len(normals)/3)
+    # assert(isinstance(group, str))
+    # assert(len(normals)%3  == 0) 
+    # assert(len(vertices)%3 == 0)
+    # assert(len(uvs)%2      == 0)
+    # assert(len(uvs)/2      == len(normals)/3)
 
+    if len(sys.argv) < 2:
+        return 
 
-    with open("/Users/symek/Desktop/cbox/test.binarymesh", 'wb') as fileio:
+    with open(sys.argv[-1], 'wb') as fileio:
         binary = BinaryMesh()
         binary.write_geometry(group, vertices, normals, uvs, faces)
         fileio.write(str(binary))
