@@ -72,11 +72,20 @@ GEO_HAPSIOTranslator::fileSaveToFile(const GEO_Detail *gdp, const char *fname)
 {
     if (!fname)
         return false;
-    if(save_binarymesh(gdp, fname))
-        return  GA_Detail::IOStatus(true);
 
-    return false;
+    // filestream
+    auto binaryfile = std::fstream(fname, 
+        std::ios::out | std::ios::binary);
+
+    bool result = false;
+    if (binaryfile) {
+        result = save_binarymesh(binaryfile, gdp);
+        binaryfile.close();
+    } 
+
+    return result;
 }
+
 void
 newGeometryIO(void *)
 {

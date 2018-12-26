@@ -44,9 +44,7 @@ void write_material_slots(std::fstream &fs,
     }
 }
 
-
-
-int save_binarymesh(const GEO_Detail *detail, const char *filename)
+int save_binarymesh(std::fstream & fs, const GEO_Detail *detail)
 {
     // Prepere for tesselation library GT_
     GU_Detail geometry;
@@ -64,56 +62,48 @@ int save_binarymesh(const GEO_Detail *detail, const char *filename)
         return 0;
     }
 
-    // filestream
-    auto binarymesh = std::fstream(filename, 
-        std::ios::out | std::ios::binary);
-
     // header
-    write_header(binarymesh);
+    write_header(fs);
 
      // part name
     const char* group = "default";
-    write_group(binarymesh, group);
+    write_group(fs, group);
 
     // points
     GT_Owner point_owner = GT_OWNER_POINT;
     GT_DataArrayHandle positionhandle = tesselated->findAttribute(
         UT_StringRef("P"), point_owner, 0);
     GT_DataArrayHandle buffer;
-    write_doubles_array(binarymesh, buffer, positionhandle);
+    write_doubles_array(fs, buffer, positionhandle);
 
-    
     // normals
     const GT_PrimPolygonMesh * tmp = tesselated;
     tesselated = tesselated->createPointNormalsIfMissing();
     if (!tesselated) {
         tesselated = tmp;
     }
-
     GT_Owner vertex_owner = GT_OWNER_VERTEX;
     auto normalhandle = tesselated->findAttribute(UT_StringRef("N"), vertex_owner, 0);
     if (!normalhandle) {
         normalhandle = tesselated->findAttribute(UT_StringRef("N"), point_owner, 0);
     }
-    write_doubles_array(binarymesh, buffer, normalhandle);
+    write_doubles_array(fs, buffer, normalhandle);
 
     // uvs
-    std::unique_ptr<fpreal64[]> uvbuffer = nullptr;
     auto uvhandle = tesselated->findAttribute(UT_StringRef("uv"), vertex_owner, 0);
     if (!uvhandle) {
         uvhandle = tesselated->findAttribute(UT_StringRef("uv"), point_owner, 0); 
     }
     if (uvhandle) {
         // repack uvs (u, v, w, u, v, w, ...) => (u, v, u, v, ...)
-        uvbuffer.reset(new fpreal64(uvhandle->entries()*2));
+        auto uvbuffer = std::make_unique<fpreal64[]>(uvhandle->entries()*2);
         uvhandle->fillArray(uvbuffer.get(), GT_Offset(0), GT_Size(uvhandle->entries()), 2);
         uvhandle = GT_DataArrayHandle(new GT_DANumeric<fpreal64>(uvbuffer.get(), GT_Size(uvhandle->entries()), 2));
         
     } else {
         uvhandle = GT_DataArrayHandle(new GT_RealConstant(positionhandle->entries(), 0.0, 2)); 
     } 
-
-    write_doubles_array(binarymesh, buffer, uvhandle);
+    write_doubles_array(fs, buffer, uvhandle);
 
     // Material
     ushort mindex = 0;
@@ -127,20 +117,18 @@ int save_binarymesh(const GEO_Detail *detail, const char *filename)
         materialhandle->getStrings(shops_strings);
         for(size_t m=0; m<shops_strings.entries(); ++m)
             materials.push_back(std::string(shops_strings[m]));
+    } 
+    //
+    materials.push_back(std::string("default"));
+    write_material_slots(fs, materials);
 
-    } else {
-        materials.push_back(std::string("default"));
-    }
-
-    write_material_slots(binarymesh, materials);
-
-    // faces:
+    //faces:
     const uint nfaces = tesselated->getFaceCount();
-    binarymesh.write((char*)&nfaces, sizeof(uint));
+    fs.write((char*)&nfaces, sizeof(uint));
     GT_DataArrayHandle verts; GT_DataArrayHandle uniform_indexing;
     GT_DataArrayHandle vertex_indexing; GT_DataArrayHandle vert_info;
     GT_DataArrayHandle prim_info;
-    
+
     tesselated->getConvexArrays(verts, uniform_indexing, 
         vertex_indexing, vert_info, prim_info);
 
@@ -148,7 +136,7 @@ int save_binarymesh(const GEO_Detail *detail, const char *filename)
     GT_DataArrayHandle vperface = tesselated->getFaceCounts();
     for(size_t f=0; f<nfaces; ++f) {
         const ushort nv = vperface->getI16(GT_Offset(f));
-        binarymesh.write((char*)&nv, sizeof(ushort));
+        fs.write((char*)&nv, sizeof(ushort));
         const GT_Offset voff = tesselated->getVertexOffset(GT_Offset(f));
         for (ushort v=0; v<nv; ++v) {
             const uint pi = verts->getI32(GT_Offset(voff+v));
@@ -156,19 +144,22 @@ int save_binarymesh(const GEO_Detail *detail, const char *filename)
             const uint vi = vertex_indexing->getI32(vidx);
             const uint ni = (positionhandle->entries() != normalhandle->entries()) ? vi : pi;
             const uint ti = (positionhandle->entries() != uvhandle->entries())     ? vi : pi;
-            binarymesh.write((char*)&pi, sizeof(uint)); // point index
-            binarymesh.write((char*)&ni, sizeof(uint)); // normal index
-            binarymesh.write((char*)&ti, sizeof(uint)); // uv index
+            fs.write((char*)&pi, sizeof(uint)); // point index
+            fs.write((char*)&ni, sizeof(uint)); // normal index
+            fs.write((char*)&ti, sizeof(uint)); // uv index
             vidx++;
         }
         if (materialhandle) {
-            mindex = materialhandle->getStringIndex(f);
+            const int materialindex = materialhandle->getStringIndex(f);
+            if (materialindex < 0) 
+                mindex = materials.size() - 1;
+            else
+                mindex = static_cast<ushort>(materialindex);
+
         }
-            binarymesh.write((char*)&mindex, sizeof(ushort));
+            fs.write((char*)&mindex, sizeof(ushort));
     }
 
-
-    binarymesh.close();
     return 1;
 }
 
