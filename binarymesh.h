@@ -97,15 +97,22 @@ int save_binarymesh(const GEO_Detail *detail, const char *filename)
     }
     write_doubles_array(binarymesh, buffer, normalhandle);
 
-    // FIXME: atm uvs have to have the same type as normals (both vertex or points)
-    // FIXME: uvs have to have tupleSize() == 2
+    // uvs
+    std::unique_ptr<fpreal64[]> uvbuffer = nullptr;
     auto uvhandle = tesselated->findAttribute(UT_StringRef("uv"), vertex_owner, 0);
     if (!uvhandle) {
-        uvhandle = tesselated->findAttribute(UT_StringRef("uv"), point_owner, 0);
-        if (!uvhandle) {
-            uvhandle = GT_DataArrayHandle(new GT_RealConstant(normalhandle->entries(), 0.0, 2));
-        }
+        uvhandle = tesselated->findAttribute(UT_StringRef("uv"), point_owner, 0); 
     }
+    if (uvhandle) {
+        // repack uvs (u, v, w, u, v, w, ...) => (u, v, u, v, ...)
+        uvbuffer.reset(new fpreal64(uvhandle->entries()*2));
+        uvhandle->fillArray(uvbuffer.get(), GT_Offset(0), GT_Size(uvhandle->entries()), 2);
+        uvhandle = GT_DataArrayHandle(new GT_DANumeric<fpreal64>(uvbuffer.get(), GT_Size(uvhandle->entries()), 2));
+        
+    } else {
+        uvhandle = GT_DataArrayHandle(new GT_RealConstant(positionhandle->entries(), 0.0, 2)); 
+    } 
+
     write_doubles_array(binarymesh, buffer, uvhandle);
 
     // Material
@@ -144,12 +151,14 @@ int save_binarymesh(const GEO_Detail *detail, const char *filename)
         binarymesh.write((char*)&nv, sizeof(ushort));
         const GT_Offset voff = tesselated->getVertexOffset(GT_Offset(f));
         for (ushort v=0; v<nv; ++v) {
-            const uint vp = verts->getI32(GT_Offset(voff+v));
-            //  is it really the case?
+            const uint pi = verts->getI32(GT_Offset(voff+v));
+            //TODO: is it really the case? vertex_indexing == for f in faces for v in face...
             const uint vi = vertex_indexing->getI32(vidx);
-            binarymesh.write((char*)&vp, sizeof(uint));
-            binarymesh.write((char*)&vi, sizeof(uint));
-            binarymesh.write((char*)&vi, sizeof(uint));
+            const uint ni = (positionhandle->entries() != normalhandle->entries()) ? vi : pi;
+            const uint ti = (positionhandle->entries() != uvhandle->entries())     ? vi : pi;
+            binarymesh.write((char*)&pi, sizeof(uint)); // point index
+            binarymesh.write((char*)&ni, sizeof(uint)); // normal index
+            binarymesh.write((char*)&ti, sizeof(uint)); // uv index
             vidx++;
         }
         if (materialhandle) {
