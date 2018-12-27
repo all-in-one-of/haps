@@ -50,7 +50,7 @@ void write_float_array(std::fstream & fs, T * buffer,
 
 void write_material_slots(std::fstream &fs, 
         const std::vector<std::string> &materials){
-
+    
     const ushort slots = materials.size();
     fs.write((char*)&slots, sizeof(ushort));
 
@@ -74,20 +74,49 @@ public:
         handle = GU_ConstDetailHandle(detailhandle);
         geometry = UTverify_cast<const GT_PrimPolygonMesh *>\
             (GT_GEODetail::makePolygonMesh(handle).get())->convex(); 
-        _mesh = UTverify_cast<const GT_PrimPolygonMesh *>(geometry.get());
-        if (_mesh)
+        tesselated = UTverify_cast<const GT_PrimPolygonMesh *>(geometry.get());
+        const GT_PrimPolygonMesh * tmp = tesselated;
+        tesselated = tesselated->createPointNormalsIfMissing();
+        if (!tesselated) {
+            tesselated = tmp;
+        }
+        if (tesselated)
             valid = true;
     }
-    
- const GT_PrimPolygonMesh * mesh() const  { return _mesh; }  
+
+    GT_DataArrayHandle find_attribute(const char* attr) {
+        auto handle = tesselated->findAttribute(UT_StringRef(attr), vertex_owner, 0);
+        if (!handle)
+            handle = tesselated->findAttribute(UT_StringRef(attr), point_owner, 0);
+        if (!handle)
+            return nullptr;
+        return handle;
+    }
+
+    void write_float_array(std::fstream &fs, const GT_DataArrayHandle & handle) {
+        assert(handle != nullptr);
+        const size_t new_buffer_size = handle->entries()*handle->getTupleSize();
+        if (buffersize < new_buffer_size) {
+            buffersize = new_buffer_size;
+            buffer.reset(new T[buffersize]); 
+        }
+        HDK_HAPS::write_float_array<T>(fs, buffer.get(), handle);
+    }
+
+const GT_PrimPolygonMesh * mesh() const { return tesselated; }
 
 private:
+    GU_DetailHandle      detailhandle;
     GU_ConstDetailHandle handle;
-    GU_DetailHandle detailhandle;
-    GT_PrimitiveHandle geometry;
-    const GT_PrimPolygonMesh * _mesh = nullptr;
-    GU_Detail gdpcopy;
-    bool valid = false;
+    GT_PrimitiveHandle   geometry;
+    GU_Detail            gdpcopy;
+    const GT_PrimPolygonMesh * 
+                    tesselated  = nullptr;
+    std::unique_ptr<T[]> buffer = nullptr;
+    GT_Owner vertex_owner = GT_OWNER_VERTEX;
+    GT_Owner point_owner  = GT_OWNER_POINT;
+    bool      valid       = false;
+    size_t    buffersize  = 0;
 
 };
 
@@ -96,79 +125,32 @@ int save_binarymesh(std::fstream & fs, const GEO_Detail *detail)
 {
     // Prepere for tesselation library GT_
     TesselatedDetail<T> geometry(detail);
-    // return 1;
-    auto tesselated = geometry.mesh();
-    if (!tesselated) {
+    if (!geometry.mesh()) {
         std::cerr << "Cant create tesselated geometry. \n";
         return 0;
     }
-
     // header
     write_header(fs);
-
-     // part name
+    // part name
     const char* group = "default";
     write_group(fs, group);
-
-    // points
-    GT_Owner point_owner = GT_OWNER_POINT;
-    GT_DataArrayHandle positionhandle = tesselated->findAttribute(
-        UT_StringRef("P"), point_owner, 0);
-
-    #ifdef USE_REAL_TYPE_TEMPLATE
-    auto rawbuffer = std::make_unique<T[]>
-        (positionhandle->entries()*positionhandle->getTupleSize());
-    write_float_array<T>(fs, rawbuffer.get(), positionhandle);
-    #else
-    GT_DataArrayHandle buffer;
-    write_doubles_array(fs, buffer, positionhandle);
-    #endif
-
-
-    // normals
-    const GT_PrimPolygonMesh * tmp = tesselated;
-    tesselated = tesselated->createPointNormalsIfMissing();
-    if (!tesselated) {
-        tesselated = tmp;
-    }
-    GT_Owner vertex_owner = GT_OWNER_VERTEX;
-    auto normalhandle = tesselated->findAttribute(UT_StringRef("N"), vertex_owner, 0);
-    if (!normalhandle) {
-        normalhandle = tesselated->findAttribute(UT_StringRef("N"), point_owner, 0);
-    }
-
-    #ifdef USE_REAL_TYPE_TEMPLATE
-    if (normalhandle->entries() > positionhandle->entries()) {
-        rawbuffer.reset(new T[normalhandle->entries()*normalhandle->getTupleSize()]);
-    }
-    write_float_array<T>(fs, rawbuffer.get(), normalhandle);
-    #else
-    write_doubles_array(fs, buffer, normalhandle);
-    #endif
-
-    // uvs
-    auto uvhandle = tesselated->findAttribute(UT_StringRef("uv"), vertex_owner, 0);
-    if (!uvhandle) {
-        uvhandle = tesselated->findAttribute(UT_StringRef("uv"), point_owner, 0); 
-    }
+    auto positionhandle = geometry.find_attribute("P");
+    auto normalhandle   = geometry.find_attribute("N");
+    auto uvhandle       = geometry.find_attribute("uv");
+    geometry.write_float_array(fs, positionhandle);
+    geometry.write_float_array(fs, normalhandle);
+    // 
     if (uvhandle) {
-        // repack uvs (u, v, w, u, v, w, ...) => (u, v, u, v, ...)
+        // repack vector3 -> vector2
         auto uvbuffer = std::make_unique<T[]>(uvhandle->entries()*2);
         uvhandle->fillArray(uvbuffer.get(), GT_Offset(0), GT_Size(uvhandle->entries()), 2);
         uvhandle = GT_DataArrayHandle(new GT_DANumeric<T>(uvbuffer.get(), GT_Size(uvhandle->entries()), 2));
-        
     } else {
         uvhandle = GT_DataArrayHandle(new GT_RealConstant(positionhandle->entries(), 0.0, 2)); 
-    } 
-    #ifdef USE_REAL_TYPE_TEMPLATE
-    if (uvhandle->entries() > normalhandle->entries()) {
-        rawbuffer.reset(new T[uvhandle->entries()*uvhandle->getTupleSize()]);
     }
-    write_float_array<T>(fs, rawbuffer.get(), uvhandle);
-    #else
-    write_doubles_array(fs, buffer, uvhandle);
-    #endif
-
+    geometry.write_float_array(fs, uvhandle);
+    // 
+    const auto tesselated = geometry.mesh();
     // Material
     ushort mindex = 0;
     std::vector<std::string> materials;
@@ -185,17 +167,16 @@ int save_binarymesh(std::fstream & fs, const GEO_Detail *detail)
     //
     materials.push_back(std::string("default"));
     write_material_slots(fs, materials);
-
-    //faces:
+    // faces:
     const uint nfaces = tesselated->getFaceCount();
     fs.write((char*)&nfaces, sizeof(uint));
     GT_DataArrayHandle verts; GT_DataArrayHandle uniform_indexing;
     GT_DataArrayHandle vertex_indexing; GT_DataArrayHandle vert_info;
     GT_DataArrayHandle prim_info;
-
+    //
     tesselated->getConvexArrays(verts, uniform_indexing, 
         vertex_indexing, vert_info, prim_info);
-
+    //
     uint vidx = 0;
     GT_DataArrayHandle vperface = tesselated->getFaceCounts();
     for(size_t f=0; f<nfaces; ++f) {
@@ -223,8 +204,6 @@ int save_binarymesh(std::fstream & fs, const GEO_Detail *detail)
         }
         fs.write((char*)&mindex, sizeof(ushort));
     }
-
     return 1;
 }
-
 } // end of namespace HDK_HAPS
