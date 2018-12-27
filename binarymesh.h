@@ -1,3 +1,4 @@
+#pragma once
 #include <GT/GT_GEODetail.h>
 #include <GT/GT_PrimPolygonMesh.h>
 #include <GT/GT_DAConstantValue.h>
@@ -45,7 +46,6 @@ void write_float_array(std::fstream & fs, T * buffer,
     handle->fillArray(buffer, 0, entries, handle->getTupleSize());
     fs.write((char*)&entries, sizeof(uint));
     fs.write((char*)buffer, bytesize);   
-
 }
 
 void write_material_slots(std::fstream &fs, 
