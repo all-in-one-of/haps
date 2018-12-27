@@ -2,6 +2,13 @@
 #include <GT/GT_PrimPolygonMesh.h>
 #include <GT/GT_DAConstantValue.h>
 
+#define USE_REAL_TYPE_TEMPLATE
+
+#ifndef USE_REAL_TYPE_TEMPLATE
+#define T fpreal64
+#endif
+
+
 namespace HDK_HAPS
 {
 
@@ -30,6 +37,17 @@ void write_doubles_array(std::fstream & fs, GT_DataArrayHandle & buffer,
     fs.write((char*)ptr, bytesize);
 }
 
+template <typename T>
+void write_float_array(std::fstream & fs, T * buffer, 
+        const GT_DataArrayHandle & handle) {
+    const uint   entries  = handle->entries();
+    const size_t bytesize = entries*handle->getTupleSize()*sizeof(T);
+    handle->fillArray(buffer, 0, entries, handle->getTupleSize());
+    fs.write((char*)&entries, sizeof(uint));
+    fs.write((char*)buffer, bytesize);   
+
+}
+
 void write_material_slots(std::fstream &fs, 
         const std::vector<std::string> &materials){
 
@@ -43,7 +61,7 @@ void write_material_slots(std::fstream &fs,
         fs.write((char*)matname, length*sizeof(char));   
     }
 }
-
+template <typename T>
 int save_binarymesh(std::fstream & fs, const GEO_Detail *detail)
 {
     // Prepere for tesselation library GT_
@@ -73,8 +91,15 @@ int save_binarymesh(std::fstream & fs, const GEO_Detail *detail)
     GT_Owner point_owner = GT_OWNER_POINT;
     GT_DataArrayHandle positionhandle = tesselated->findAttribute(
         UT_StringRef("P"), point_owner, 0);
+
+    #ifdef USE_REAL_TYPE_TEMPLATE
+    auto rawbuffer = std::make_unique<T[]>
+        (positionhandle->entries()*positionhandle->getTupleSize());
+    write_float_array<T>(fs, rawbuffer.get(), positionhandle);
+    #else
     GT_DataArrayHandle buffer;
     write_doubles_array(fs, buffer, positionhandle);
+    #endif
 
     // normals
     const GT_PrimPolygonMesh * tmp = tesselated;
@@ -87,7 +112,15 @@ int save_binarymesh(std::fstream & fs, const GEO_Detail *detail)
     if (!normalhandle) {
         normalhandle = tesselated->findAttribute(UT_StringRef("N"), point_owner, 0);
     }
+
+    #ifdef USE_REAL_TYPE_TEMPLATE
+    if (normalhandle->entries() > positionhandle->entries()) {
+        rawbuffer.reset(new T[normalhandle->entries()*normalhandle->getTupleSize()]);
+    }
+    write_float_array<T>(fs, rawbuffer.get(), normalhandle);
+    #else
     write_doubles_array(fs, buffer, normalhandle);
+    #endif
 
     // uvs
     auto uvhandle = tesselated->findAttribute(UT_StringRef("uv"), vertex_owner, 0);
@@ -96,14 +129,21 @@ int save_binarymesh(std::fstream & fs, const GEO_Detail *detail)
     }
     if (uvhandle) {
         // repack uvs (u, v, w, u, v, w, ...) => (u, v, u, v, ...)
-        auto uvbuffer = std::make_unique<fpreal64[]>(uvhandle->entries()*2);
+        auto uvbuffer = std::make_unique<T[]>(uvhandle->entries()*2);
         uvhandle->fillArray(uvbuffer.get(), GT_Offset(0), GT_Size(uvhandle->entries()), 2);
-        uvhandle = GT_DataArrayHandle(new GT_DANumeric<fpreal64>(uvbuffer.get(), GT_Size(uvhandle->entries()), 2));
+        uvhandle = GT_DataArrayHandle(new GT_DANumeric<T>(uvbuffer.get(), GT_Size(uvhandle->entries()), 2));
         
     } else {
         uvhandle = GT_DataArrayHandle(new GT_RealConstant(positionhandle->entries(), 0.0, 2)); 
     } 
+    #ifdef USE_REAL_TYPE_TEMPLATE
+    if (uvhandle->entries() > normalhandle->entries()) {
+        rawbuffer.reset(new T[uvhandle->entries()*uvhandle->getTupleSize()]);
+    }
+    write_float_array<T>(fs, rawbuffer.get(), uvhandle);
+    #else
     write_doubles_array(fs, buffer, uvhandle);
+    #endif
 
     // Material
     ushort mindex = 0;
@@ -151,13 +191,13 @@ int save_binarymesh(std::fstream & fs, const GEO_Detail *detail)
         }
         if (materialhandle) {
             const int materialindex = materialhandle->getStringIndex(f);
-            if (materialindex < 0) 
+            if (materialindex < 0) {
                 mindex = materials.size() - 1;
-            else
+            } else {
                 mindex = static_cast<ushort>(materialindex);
-
+            }
         }
-            fs.write((char*)&mindex, sizeof(ushort));
+        fs.write((char*)&mindex, sizeof(ushort));
     }
 
     return 1;

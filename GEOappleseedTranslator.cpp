@@ -79,7 +79,7 @@ GEO_HAPSIOTranslator::fileSaveToFile(const GEO_Detail *gdp, const char *fname)
 
     bool result = false;
     if (binaryfile) {
-        result = save_binarymesh(binaryfile, gdp);
+        result = save_binarymesh<fpreal64>(binaryfile, gdp);
         binaryfile.close();
     } 
 
