@@ -72,8 +72,7 @@ GEO_HAPSIOTranslator::fileSaveToFile(const GEO_Detail *gdp, const char *fname)
 {
     if (!fname)
         return false;
-
-    // filestream
+    
     auto binaryfile = std::fstream(fname, 
         std::ios::out | std::ios::binary);
 

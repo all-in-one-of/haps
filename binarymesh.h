@@ -61,20 +61,43 @@ void write_material_slots(std::fstream &fs,
         fs.write((char*)matname, length*sizeof(char));   
     }
 }
+
+template<typename T>
+class TesselatedDetail
+{
+public:
+    TesselatedDetail(const GEO_Detail * gdp) {
+        // I'm bothered with this copy. 
+        // GT_Primitive makes copies anyway...
+        gdpcopy.copy(*gdp);
+        detailhandle.allocateAndSet(&gdpcopy, false);
+        handle = GU_ConstDetailHandle(detailhandle);
+        geometry = UTverify_cast<const GT_PrimPolygonMesh *>\
+            (GT_GEODetail::makePolygonMesh(handle).get())->convex(); 
+        _mesh = UTverify_cast<const GT_PrimPolygonMesh *>(geometry.get());
+        if (_mesh)
+            valid = true;
+    }
+    
+ const GT_PrimPolygonMesh * mesh() const  { return _mesh; }  
+
+private:
+    GU_ConstDetailHandle handle;
+    GU_DetailHandle detailhandle;
+    GT_PrimitiveHandle geometry;
+    const GT_PrimPolygonMesh * _mesh = nullptr;
+    GU_Detail gdpcopy;
+    bool valid = false;
+
+};
+
 template <typename T>
 int save_binarymesh(std::fstream & fs, const GEO_Detail *detail)
 {
     // Prepere for tesselation library GT_
-    GU_Detail geometry;
-    geometry.copy(*detail); // do we really need to copy?
-    GU_DetailHandle detailhandle;
-    detailhandle.allocateAndSet(&geometry, false);
-    GU_ConstDetailHandle constdetailh(detailhandle);
-    auto polymeshhandle   = GT_GEODetail::makePolygonMesh(constdetailh);
-    auto polymesh         = UTverify_cast<const GT_PrimPolygonMesh *>(polymeshhandle.get());
-    auto convexmeshhandle = polymesh->convex();
-    auto tesselated       = UTverify_cast<const GT_PrimPolygonMesh *>(convexmeshhandle.get());
-   
+    TesselatedDetail<T> geometry(detail);
+    // return 1;
+    auto tesselated = geometry.mesh();
     if (!tesselated) {
         std::cerr << "Cant create tesselated geometry. \n";
         return 0;
@@ -100,6 +123,7 @@ int save_binarymesh(std::fstream & fs, const GEO_Detail *detail)
     GT_DataArrayHandle buffer;
     write_doubles_array(fs, buffer, positionhandle);
     #endif
+
 
     // normals
     const GT_PrimPolygonMesh * tmp = tesselated;
