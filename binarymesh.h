@@ -175,11 +175,11 @@ int save_binarymesh(std::fstream & fs, const GEO_Detail *detail)
     const bool uv_on_vert     = positionhandle->entries() != uvhandle->entries();
     //
     GT_DataArrayHandle vperface = geometry.mesh()->getFaceCounts();
-    for(size_t face=0, vidx=0; face<nfaces; ++face, ++vidx) {
+    for(size_t face=0, vidx=0; face<nfaces; ++face) {
         const ushort nvertices = vperface->getI16(GT_Offset(face));
         fs.write((char*)&nvertices, sizeof(ushort));
         const GT_Offset first_vert_offset = geometry.mesh()->getVertexOffset(GT_Offset(face));
-        for (ushort vert=0; vert<nvertices; ++vert) {
+        for (ushort vert=0; vert<nvertices; ++vert, ++vidx) {
             const uint point_index  = point_indexing->getI32(GT_Offset(first_vert_offset+vert));
             const uint vertex_index = vertex_indexing->getI32(vidx);
             const uint normal_index = normal_on_vert ? vertex_index : point_index;
