@@ -32,7 +32,7 @@ void write_doubles_array(std::fstream & fs, GT_DataArrayHandle & buffer,
 }
 
 template <typename T>
-void write_float_array(std::fstream & fs, T * buffer, 
+void write_float_array(std::ostream & fs, T * buffer, 
         const GT_DataArrayHandle & handle) {
     const uint   entries  = handle->entries();
     const size_t bytesize = entries*handle->getTupleSize()*sizeof(T);
@@ -86,7 +86,7 @@ public:
         }
     }
 
-    void save_attribute(std::fstream &fs, const GT_DataArrayHandle & handle) {
+    void save_attribute(std::ostream &fs, const GT_DataArrayHandle & handle) {
         assert(handle != nullptr);
         const size_t new_buffer_size = handle->entries()*handle->getTupleSize();
         if (buffersize < new_buffer_size) {
@@ -131,8 +131,12 @@ int save_binarymesh(std::fstream & fs, const GEO_Detail *detail)
     auto positionhandle = geometry.find_attribute("P");
     auto normalhandle   = geometry.find_attribute("N");
     auto uvhandle       = geometry.find_attribute("uv");
-    geometry.save_attribute(fs, positionhandle);
-    geometry.save_attribute(fs, normalhandle);
+    // TODO: for lz4
+    std::ostringstream compress_cache;
+    geometry.save_attribute(compress_cache, positionhandle);
+    geometry.save_attribute(compress_cache, normalhandle);
+    // size_t size = LZ4_compress((const char*)compress_cace.str(), ....)
+    fs << compress_cache.str();
     // 
     if (uvhandle) {
         // repack vector3 -> vector2
