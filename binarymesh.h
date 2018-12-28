@@ -3,13 +3,6 @@
 #include <GT/GT_PrimPolygonMesh.h>
 #include <GT/GT_DAConstantValue.h>
 
-#define USE_REAL_TYPE_TEMPLATE
-
-#ifndef USE_REAL_TYPE_TEMPLATE
-#define T fpreal64
-#endif
-
-
 namespace HDK_HAPS
 {
 
@@ -50,7 +43,7 @@ void write_float_array(std::fstream & fs, T * buffer,
 
 void write_material_slots(std::fstream &fs, 
         const std::vector<std::string> &materials){
-    
+
     const ushort slots = materials.size();
     fs.write((char*)&slots, sizeof(ushort));
 
@@ -63,10 +56,10 @@ void write_material_slots(std::fstream &fs,
 }
 
 template<typename T>
-class TesselatedDetail
+class TesselatedGeometry
 {
 public:
-    TesselatedDetail(const GEO_Detail * gdp) {
+    TesselatedGeometry(const GEO_Detail * gdp) {
         // I'm bothered with this copy. 
         // GT_Primitive makes copies anyway...
         gdpcopy.copy(*gdp);
@@ -84,16 +77,16 @@ public:
             valid = true;
     }
 
-    GT_DataArrayHandle find_attribute(const char* attr) {
-        auto handle = tesselated->findAttribute(UT_StringRef(attr), vertex_owner, 0);
-        if (!handle)
-            handle = tesselated->findAttribute(UT_StringRef(attr), point_owner, 0);
-        if (!handle)
-            return nullptr;
-        return handle;
+    GT_DataArrayHandle find_attribute(const char* attr, GT_Owner owner=GT_OWNER_INVALID) {
+        if (owner == GT_OWNER_INVALID) {
+            // take any attr class by default (start with vertex and proceed upwards)
+            return tesselated->findAttribute(UT_StringRef(attr), vertex_owner, 0);
+        } else {
+           return tesselated->findAttribute(UT_StringRef(attr), owner, 0);
+        }
     }
 
-    void write_float_array(std::fstream &fs, const GT_DataArrayHandle & handle) {
+    void save_attribute(std::fstream &fs, const GT_DataArrayHandle & handle) {
         assert(handle != nullptr);
         const size_t new_buffer_size = handle->entries()*handle->getTupleSize();
         if (buffersize < new_buffer_size) {
@@ -103,7 +96,8 @@ public:
         HDK_HAPS::write_float_array<T>(fs, buffer.get(), handle);
     }
 
-const GT_PrimPolygonMesh * mesh() const { return tesselated; }
+    const GT_PrimPolygonMesh * mesh() const { return tesselated; }
+    bool                    isValid() const { return valid; }
 
 private:
     GU_DetailHandle      detailhandle;
@@ -124,8 +118,8 @@ template <typename T>
 int save_binarymesh(std::fstream & fs, const GEO_Detail *detail)
 {
     // Prepere for tesselation library GT_
-    TesselatedDetail<T> geometry(detail);
-    if (!geometry.mesh()) {
+    TesselatedGeometry<T> geometry(detail);
+    if (!geometry.isValid()) {
         std::cerr << "Cant create tesselated geometry. \n";
         return 0;
     }
@@ -137,8 +131,8 @@ int save_binarymesh(std::fstream & fs, const GEO_Detail *detail)
     auto positionhandle = geometry.find_attribute("P");
     auto normalhandle   = geometry.find_attribute("N");
     auto uvhandle       = geometry.find_attribute("uv");
-    geometry.write_float_array(fs, positionhandle);
-    geometry.write_float_array(fs, normalhandle);
+    geometry.save_attribute(fs, positionhandle);
+    geometry.save_attribute(fs, normalhandle);
     // 
     if (uvhandle) {
         // repack vector3 -> vector2
@@ -148,54 +142,54 @@ int save_binarymesh(std::fstream & fs, const GEO_Detail *detail)
     } else {
         uvhandle = GT_DataArrayHandle(new GT_RealConstant(positionhandle->entries(), 0.0, 2)); 
     }
-    geometry.write_float_array(fs, uvhandle);
+    geometry.save_attribute(fs, uvhandle);
     // 
-    const auto tesselated = geometry.mesh();
     // Material
     ushort mindex = 0;
     std::vector<std::string> materials;
-    GT_Owner prim_owner = GT_OWNER_PRIMITIVE;
-    auto materialhandle = tesselated->findAttribute(
-        UT_StringRef("shop_materialpath"), prim_owner, 0);
+    auto materialhandle = geometry.find_attribute("shop_materialpath");
 
     if (materialhandle) {
         UT_StringArray shops_strings;
         materialhandle->getStrings(shops_strings);
-        for(size_t m=0; m<shops_strings.entries(); ++m)
-            materials.push_back(std::string(shops_strings[m]));
+        for(auto & shop: shops_strings) {
+            materials.push_back(std::string(shop));
+        }
     } 
-    //
     materials.push_back(std::string("default"));
     write_material_slots(fs, materials);
+
     // faces:
-    const uint nfaces = tesselated->getFaceCount();
-    fs.write((char*)&nfaces, sizeof(uint));
-    GT_DataArrayHandle verts; GT_DataArrayHandle uniform_indexing;
+    GT_DataArrayHandle point_indexing; GT_DataArrayHandle uniform_indexing;
     GT_DataArrayHandle vertex_indexing; GT_DataArrayHandle vert_info;
     GT_DataArrayHandle prim_info;
-    //
-    tesselated->getConvexArrays(verts, uniform_indexing, 
+
+    // get all in flat arrays for free
+    geometry.mesh()->getConvexArrays(point_indexing, uniform_indexing, 
         vertex_indexing, vert_info, prim_info);
     //
-    uint vidx = 0;
-    GT_DataArrayHandle vperface = tesselated->getFaceCounts();
-    for(size_t f=0; f<nfaces; ++f) {
-        const ushort nv = vperface->getI16(GT_Offset(f));
-        fs.write((char*)&nv, sizeof(ushort));
-        const GT_Offset voff = tesselated->getVertexOffset(GT_Offset(f));
-        for (ushort v=0; v<nv; ++v) {
-            const uint pi = verts->getI32(GT_Offset(voff+v));
-            //TODO: is it really the case? vertex_indexing == for f in faces for v in face...
-            const uint vi = vertex_indexing->getI32(vidx);
-            const uint ni = (positionhandle->entries() != normalhandle->entries()) ? vi : pi;
-            const uint ti = (positionhandle->entries() != uvhandle->entries())     ? vi : pi;
-            fs.write((char*)&pi, sizeof(uint)); // point index
-            fs.write((char*)&ni, sizeof(uint)); // normal index
-            fs.write((char*)&ti, sizeof(uint)); // uv index
-            vidx++;
+    const uint nfaces = geometry.mesh()->getFaceCount();
+    fs.write((char*)&nfaces, sizeof(uint));
+    //
+    const bool normal_on_vert = positionhandle->entries() != normalhandle->entries();
+    const bool uv_on_vert     = positionhandle->entries() != uvhandle->entries();
+    //
+    GT_DataArrayHandle vperface = geometry.mesh()->getFaceCounts();
+    for(size_t face=0, vidx=0; face<nfaces; ++face, ++vidx) {
+        const ushort nvertices = vperface->getI16(GT_Offset(face));
+        fs.write((char*)&nvertices, sizeof(ushort));
+        const GT_Offset first_vert_offset = geometry.mesh()->getVertexOffset(GT_Offset(face));
+        for (ushort vert=0; vert<nvertices; ++vert) {
+            const uint point_index  = point_indexing->getI32(GT_Offset(first_vert_offset+vert));
+            const uint vertex_index = vertex_indexing->getI32(vidx);
+            const uint normal_index = normal_on_vert ? vertex_index : point_index;
+            const uint uv_index     = uv_on_vert     ? vertex_index : point_index;
+            fs.write((char*)&point_index, sizeof(uint)); // point index
+            fs.write((char*)&normal_index, sizeof(uint)); // normal index
+            fs.write((char*)&uv_index, sizeof(uint)); // uv index
         }
         if (materialhandle) {
-            const int materialindex = materialhandle->getStringIndex(f);
+            const int materialindex = materialhandle->getStringIndex(face);
             if (materialindex < 0) {
                 mindex = materials.size() - 1;
             } else {
