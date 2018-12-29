@@ -50,9 +50,6 @@ class Element(OrderedDict):
             for v in values:
                 yield v 
 
-    # def __str__(self):
-    #     return self.tostring()
-
     def __repr__(self):
         return super(Element, self).__repr__()
 
