@@ -1,5 +1,4 @@
 import sys, os
-sys.path.append("/home/symek/work/haps")
 
 import time
 import soho
@@ -163,20 +162,13 @@ soho.lockObjects(now)
 FPS = soho.getDefaultedFloat('state:fps', [24])[0]
 FPSinv = 1.0 / FPS
 
-import happleseed
-import happleseed_types
-import happleseed_types as types
 import haps
-reload(happleseed)
-reload(happleseed_types)
-reload(types)
-reload(haps)
+import APSframe as APSobj
 
-apple = happleseed.AppleSeed()
-apple.Scene()
-apple.Assembly()
-scene = apple.scene
-assembly =apple.assembly
+
+aps = APSobj.Appleseed()
+scene = aps.scene
+assembly = aps.assembly
 
 def get_obj_filename(obj, group='', ext=EXTENSION):
     objectname = obj.getName().replace("/", "_")[1:] + group + ext
@@ -195,14 +187,14 @@ camera_parms = {'film_dimensions': (cam.getDefaultedInt('res', now, [0,0])[0],
 
 
 ##### CAMERA - Pinhole camera - for now ###################
-camera = types.PinholeCamera(cam.getName(), **camera_parms)
+camera = APSobj.PinholeCamera(cam.getName(), **camera_parms)
 xform  = []
 if cam.evalFloat("space:world", now, xform):
     camera.add(haps.Transform(time=now).add(
         haps.Matrix(xform)))
 
 scene.add(camera)
-assembly.add(types.DefaultLambertMaterial('default_material'))
+assembly.add(APSobj.DefaultLambertMaterial('default_material'))
 
 ##### Basic objects - /obj level - #############################
 for obj in soho.objectList('objlist:instance'):
@@ -230,27 +222,27 @@ for obj in soho.objectList('objlist:instance'):
 
     xform = []
     obj.evalFloat("space:world", now, xform)
-    apple.Assembly().insert('MeshObject', obj.getName(), 
+    aps.Assembly().insert('MeshObject', obj.getName(), 
         filename=filename, xform=haps.Matrix(xform))
 
 ###### Basic lights ######################################
 for light in soho.objectList('objlist:light'):
     xform = []
     light.evalFloat('space:world', now, xform)
-    apple.Assembly().insert('PointLight', light.getName(), xform=haps.Matrix(xform))
+    aps.Assembly().insert('PointLight', light.getName(), xform=haps.Matrix(xform))
 
 ############ - Frame - basics - ##################################
-apple.Output().insert('Frame', 'beauty', resolution=camera_parms['film_dimensions'], 
+aps.Output().insert('Frame', 'beauty', resolution=camera_parms['film_dimensions'], 
     crop_window=(0,0,camera_parms['film_dimensions'][0], camera_parms['film_dimensions'][1]),
     camera=camera.get('name'))
 
 
 ########## - Render configuration - ######################################
-apple.Config().insert('FinalConfiguration', 'final')
-apple.Config().insert('InteractiveConfiguration', 'interactive')
+aps.Config().insert('FinalConfiguration', 'final')
+aps.Config().insert('InteractiveConfiguration', 'interactive')
 
 with open('/tmp/aps.appleseed', 'w') as file:
-    file.write(str(apple.project))
+    file.write(str(aps.project))
 
 
 
