@@ -1,7 +1,17 @@
-import haps
 import collections
 import types
 import inspect 
+import haps
+
+def Factory(typename,  name, parms=(), **kwargs):
+    # This is depracated.
+    object_ = getattr(inspect.getmodule(haps), typename)(name, **kwargs)
+    assert isinstance(parms, collections.Iterable)
+    for parm in parms:
+        k, v = parm
+        object_.add(haps.Parameter(k, v))
+    return object_
+
 
 class Appleseed(object):
     """ 
@@ -77,8 +87,8 @@ class Appleseed(object):
         self.project = haps.Project()
         self.Scene() 
         self.Assembly() # Just default one.
-        self.Config()
-        self.Output()
+        # self.Config()
+        # self.Output()
 
     def Scene(self):
         """ Adds default scene object to a project and returns the object suitable
@@ -424,6 +434,7 @@ def DisneyMaterial(name, layers=1, **kwargs):
         name = 'layer%i' % layer
         material.add(DisneyMaterialLayer(name, layer, **kwargs))
     return shader, material
+
 
 def PointLight(name, **kwargs):
     light = haps.Light(name, model='point_light')
