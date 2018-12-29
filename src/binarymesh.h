@@ -21,7 +21,7 @@
 namespace HDK_HAPS
 {
 
-void write_header(std::fstream &fs) {
+void write_header(std::ostream &fs) {
     const char   header[]   = {'B', 'I', 'N', 'A', 'R', 'Y', 'M', 'E', 'S', 'H'};
     const ushort version    = BINARYMESH_VERSION;
     fs.write(header, 10);
@@ -82,12 +82,12 @@ public:
     bool tesselate(const bool compute_normals=true, const bool vertex_normals=false) 
     {
         detailhandle.allocateAndSet(&gdpcopy, false);
-        handle = GU_ConstDetailHandle(detailhandle);
-        if (!handle.isValid()) {
+        consthandle = GU_ConstDetailHandle(detailhandle);
+        if (!consthandle.isValid()) {
             return false;
         }
         geometry = UTverify_cast<const GT_PrimPolygonMesh *>\
-            (GT_GEODetail::makePolygonMesh(handle).get())->convex(); 
+            (GT_GEODetail::makePolygonMesh(consthandle).get())->convex(); 
         if (!geometry) {
             return false;
         }
@@ -139,7 +139,7 @@ public:
 
 private:
     GU_DetailHandle      detailhandle;
-    GU_ConstDetailHandle handle;
+    GU_ConstDetailHandle consthandle;
     GT_PrimitiveHandle   geometry;
     GU_Detail            gdpcopy;
     const GT_PrimPolygonMesh * 
@@ -152,7 +152,7 @@ private:
 
 };
 
-int save_binarymesh(std::fstream & fs, const GEO_Detail *detail)
+int save_binarymesh(std::ostream & fs, const GEO_Detail *detail)
 {
     // This is our tesselated object. Only triangles.
     // It has also normals added, if they were absent.
