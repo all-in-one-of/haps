@@ -3,9 +3,16 @@
 #include <GT/GT_PrimPolygonMesh.h>
 #include <GT/GT_DAConstantValue.h>
 #ifdef LZ4
+#include "lz4.h"
+#endif
+#if defined BINARYMESH_VERSION_4 && defined LZ4
 #define FLOAT_PRECISION fpreal32
 #define BINARYMESH_VERSION 4
-#include "lz4.h"
+#define USE_LZ4
+#elif defined BINARYMESH_VERSION_3 && defined LZ4 
+#define FLOAT_PRECISION fpreal64
+#define BINARYMESH_VERSION 3
+#define USE_LZ4
 #else
 #define FLOAT_PRECISION fpreal64
 #define BINARYMESH_VERSION 1
@@ -13,8 +20,6 @@
 
 namespace HDK_HAPS
 {
-
-// constexpr ushort BINARYMESH_VERSION = 4;
 
 void write_header(std::fstream &fs) {
     const char   header[]   = {'B', 'I', 'N', 'A', 'R', 'Y', 'M', 'E', 'S', 'H'};
@@ -75,6 +80,7 @@ public:
         // I'm bothered with this copy. 
         // GT_Primitive makes copies anyway...
         gdpcopy.copy(*gdp);
+        // TODO: more checkes setting valid flag;
         detailhandle.allocateAndSet(&gdpcopy, false);
         handle = GU_ConstDetailHandle(detailhandle);
         geometry = UTverify_cast<const GT_PrimPolygonMesh *>\
@@ -129,39 +135,42 @@ private:
 
 int save_binarymesh(std::fstream & fs, const GEO_Detail *detail)
 {
-    // Prepere for tesselation library GT_
+    // This is our tesselated object. Only triangles.
+    // It has also normals added, if they were absent.
     TesselatedGeometry<FLOAT_PRECISION> geometry(detail);
     if (!geometry.isValid()) {
-        std::cerr << "Cant create tesselated geometry. \n";
+        std::cerr << "Can't create tesselated geometry. \n";
         return 0;
     }
-    // header
-    write_header(fs);
 
+    // P,N,uv
     auto positionhandle = geometry.find_attribute("P");
     auto normalhandle   = geometry.find_attribute("N");
     auto uvhandle       = geometry.find_attribute("uv");
-    // 
-    std::ostringstream datablock;
+    // header
+    write_header(fs);
+    // datablock buffer 
+    std::stringstream datablock;
     // part name
     const char* part_name = "default";
-    size_t bytes  = write_part_name(datablock, part_name);
-           bytes += geometry.save_attribute(datablock, positionhandle);
-           bytes += geometry.save_attribute(datablock, normalhandle);
-    
-    // 
+    write_part_name(datablock, part_name);
+    //
+    geometry.save_attribute(datablock, positionhandle);
+    geometry.save_attribute(datablock, normalhandle);
+
+    // repack vector3 -> vector2 or make 0,0 uv 
     if (uvhandle) {
-        // repack vector3 -> vector2
         auto uvbuffer = std::make_unique<FLOAT_PRECISION[]>(uvhandle->entries()*2);
         uvhandle->fillArray(uvbuffer.get(), GT_Offset(0), GT_Size(uvhandle->entries()), 2);
         uvhandle = GT_DataArrayHandle(new GT_DANumeric<FLOAT_PRECISION>(uvbuffer.get(), 
             GT_Size(uvhandle->entries()), 2));
     } else {
+        // TODO: make it single element -> requires different indexing then N
         uvhandle = GT_DataArrayHandle(new GT_RealConstant(positionhandle->entries(), 0.0, 2)); 
     }
-    bytes += geometry.save_attribute(datablock, uvhandle);
+    geometry.save_attribute(datablock, uvhandle);
     // 
-    // Material
+    // Materials
     ushort mindex = 0;
     std::vector<std::string> materials;
     auto materialhandle = geometry.find_attribute("shop_materialpath");
@@ -174,20 +183,19 @@ int save_binarymesh(std::fstream & fs, const GEO_Detail *detail)
         }
     } 
     materials.push_back(std::string("default"));
-    bytes += write_material_slots(datablock, materials);
+    write_material_slots(datablock, materials);
 
     // faces:
     GT_DataArrayHandle point_indexing; GT_DataArrayHandle uniform_indexing;
     GT_DataArrayHandle vertex_indexing; GT_DataArrayHandle vert_info;
     GT_DataArrayHandle prim_info;
 
-    // get all in flat arrays for free
+    // get all in flat arrays in one shot
     geometry.mesh()->getConvexArrays(point_indexing, uniform_indexing, 
         vertex_indexing, vert_info, prim_info);
     //
     const uint nfaces = geometry.mesh()->getFaceCount();
     datablock.write((char*)&nfaces, sizeof(uint)); 
-    bytes += sizeof(uint);
     //
     const bool normal_on_vert = positionhandle->entries() != normalhandle->entries();
     const bool uv_on_vert     = positionhandle->entries() != uvhandle->entries();
@@ -196,17 +204,15 @@ int save_binarymesh(std::fstream & fs, const GEO_Detail *detail)
     for(size_t face=0, vidx=0; face<nfaces; ++face) {
         const ushort nvertices = vperface->getI16(GT_Offset(face));
         datablock.write((char*)&nvertices, sizeof(ushort)); 
-        bytes += sizeof(ushort);
         const GT_Offset first_vert_offset = geometry.mesh()->getVertexOffset(GT_Offset(face));
         for (ushort vert=0; vert<nvertices; ++vert, ++vidx) {
             const uint point_index  = point_indexing->getI32(GT_Offset(first_vert_offset+vert));
             const uint vertex_index = vertex_indexing->getI32(vidx);
             const uint normal_index = normal_on_vert ? vertex_index : point_index;
             const uint uv_index     = uv_on_vert     ? vertex_index : point_index;
-            datablock.write((char*)&point_index, sizeof(uint)); // point index
+            datablock.write((char*)&point_index, sizeof(uint));  // point index
             datablock.write((char*)&normal_index, sizeof(uint)); // normal index
-            datablock.write((char*)&uv_index, sizeof(uint)); // uv index
-            bytes += 3*sizeof(uint);
+            datablock.write((char*)&uv_index, sizeof(uint));     // uv index
         }
         if (materialhandle) {
             const int materialindex = materialhandle->getStringIndex(face);
@@ -217,12 +223,15 @@ int save_binarymesh(std::fstream & fs, const GEO_Detail *detail)
             }
         }
         datablock.write((char*)&mindex, sizeof(ushort));
-        bytes += sizeof(ushort);
     }
 
-    #ifdef LZ4
-        auto compressed = std::make_unique<char[]>(bytes);
-        auto lz4bytes   = LZ4_compress((const char *)datablock.rdbuf(), compressed.get(), bytes);
+    #ifdef USE_LZ4
+        datablock.seekp(0, std::ios::end);
+        size_t bytes        = datablock.tellp(); datablock.seekg(0, std::ios::beg);
+        size_t lz4bytes     = LZ4_compressBound(bytes);
+        auto   compressed   = std::make_unique<char[]>(lz4bytes);
+        const std::string&  temporary(datablock.str()); // good chance it won't be copied.
+               lz4bytes     = LZ4_compress((const char*)temporary.c_str(), (char *)compressed.get(), bytes);
         fs.write((char*)&bytes,     sizeof(size_t));
         fs.write((char*)&lz4bytes,  sizeof(size_t));
         fs.write((char*)compressed.get(), lz4bytes);
