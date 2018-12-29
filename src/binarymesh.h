@@ -67,26 +67,53 @@ template<typename T>
 class TesselatedGeometry
 {
 public:
-    TesselatedGeometry(const GEO_Detail * gdp) {
+    TesselatedGeometry(const GEO_Detail * gdp) 
+    {
         // I'm bothered with this copy. 
         // GT_Primitive makes copies anyway...
-        gdpcopy.copy(*gdp);
-        // TODO: more checkes setting valid flag;
-        detailhandle.allocateAndSet(&gdpcopy, false);
-        handle = GU_ConstDetailHandle(detailhandle);
-        geometry = UTverify_cast<const GT_PrimPolygonMesh *>\
-            (GT_GEODetail::makePolygonMesh(handle).get())->convex(); 
-        tesselated = UTverify_cast<const GT_PrimPolygonMesh *>(geometry.get());
-        const GT_PrimPolygonMesh * tmp = tesselated;
-        tesselated = tesselated->createPointNormalsIfMissing();
-        if (!tesselated) {
-            tesselated = tmp;
+        if(!gdp->isEmpty()) {
+            gdpcopy.copy(*gdp);
         }
-        if (tesselated)
+        if (!gdpcopy.isEmpty() && tesselate()) {
             valid = true;
+        }
     }
 
-    GT_DataArrayHandle find_attribute(const char* attr, GT_Owner owner=GT_OWNER_INVALID) {
+    bool tesselate(const bool compute_normals=true, const bool vertex_normals=false) 
+    {
+        detailhandle.allocateAndSet(&gdpcopy, false);
+        handle = GU_ConstDetailHandle(detailhandle);
+        if (!handle.isValid()) {
+            return false;
+        }
+        geometry = UTverify_cast<const GT_PrimPolygonMesh *>\
+            (GT_GEODetail::makePolygonMesh(handle).get())->convex(); 
+        if (!geometry) {
+            return false;
+        }
+        tesselated = UTverify_cast<const GT_PrimPolygonMesh *>(geometry.get());
+        if (!tesselated) {           
+            return false;
+        }
+        //TODO: should we compute vertex normals instead?
+        if (compute_normals) {
+            const GT_PrimPolygonMesh * tmp = tesselated;
+            tesselated = tesselated->createPointNormalsIfMissing();
+            // this is because if normals exist, create*Normals() returns nullptr.
+            if (!tesselated) {
+                tesselated = tmp;
+            }
+        } 
+        if (tesselated) {
+            return true; 
+        }
+        return false;
+    }
+
+    GT_DataArrayHandle find_attribute(const char* attr, GT_Owner owner=GT_OWNER_INVALID, 
+        const bool only_used_points=false) 
+    {
+        // make special case for P using getUsedPointList()
         if (owner == GT_OWNER_INVALID) {
             // take any attr class by default (start with vertex and proceed upwards)
             return tesselated->findAttribute(UT_StringRef(attr), vertex_owner, 0);
@@ -95,7 +122,8 @@ public:
         }
     }
 
-    size_t save_attribute(std::ostream &fs, const GT_DataArrayHandle & handle) {
+    size_t save_attribute(std::ostream &fs, const GT_DataArrayHandle & handle) 
+    {
         assert(handle != nullptr);
         const size_t new_buffer_size = handle->entries()*handle->getTupleSize();
         if (buffersize < new_buffer_size) {
