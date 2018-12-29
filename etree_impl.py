@@ -12,6 +12,11 @@ class XMLTokens(defaultdict):
     parent_start_tag='</'
 
 
+def tostring(element, pretty_print=True):
+    """Render element to string with XML document. """
+    from StringIO import StringIO
+    return element.toxml(StringIO()).getvalue()
+
 class Element(OrderedDict):
     """Minimal implementation of xml.ElementTree API
        based on Python native dictionary.
@@ -45,11 +50,8 @@ class Element(OrderedDict):
             for v in values:
                 yield v 
 
-    def __str__(self):
-        """ Major functionality of this class. Using base clase to tostring() method
-            represents itself as a XML node / document.
-        """
-        return self.tostring()
+    # def __str__(self):
+    #     return self.tostring()
 
     def __repr__(self):
         return super(Element, self).__repr__()
@@ -151,11 +153,6 @@ class Element(OrderedDict):
         if not self.attribute_token in self:
             self[self.attribute_token] = {}
         self[self.attribute_token][key] = value
-
-    def tostring(self, pretty_print=True):
-        """Returns xml string of current element and its children."""
-        from StringIO import StringIO
-        return self.toxml(StringIO()).getvalue()
 
     def tojson(self, indent=2):
         """Return json representation of current element."""

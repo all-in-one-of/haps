@@ -30,7 +30,6 @@ def update_parameters(obj, **kwargs):
 
 
 class Project(HapsObj):
-    _children = []
     def __init__(self):
         super(Project, self).__init__()
         self.set("format_revision", FORMAT_REVISION)

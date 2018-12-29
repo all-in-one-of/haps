@@ -1,7 +1,7 @@
 import collections, types
 from collections import defaultdict
 FORMAT_REVISION = 27
-from etree_impl import Element
+from etree_impl import Element, tostring
 # from xml.etree.ElementTree import Element, tostring
 
 import logging, sys
@@ -32,6 +32,12 @@ class HapsObj(Element):
             return self.extend(obj)
         else:
             return self.append(obj)
+
+    def __repr__(self):
+        return tostring(self)
+
+    def tostring(self):
+        return tostring(self)
 
     def add_parms(self, parms):
         """Constructs & appends a parameters objects 
