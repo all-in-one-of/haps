@@ -36,15 +36,6 @@ size_t write_part_name(std::ostream & fs, const char *group) {
     
 }
 
-void write_doubles_array(std::fstream & fs, GT_DataArrayHandle & buffer, 
-        const GT_DataArrayHandle & handle) {
-    const uint   entries  = handle->entries();
-    const size_t bytesize = entries*handle->getTupleSize()*sizeof(fpreal64);
-    const fpreal64 * ptr = handle->getF64Array(buffer);
-    fs.write((char*)&entries, sizeof(uint));
-    fs.write((char*)ptr, bytesize);
-}
-
 template <typename T>
 size_t write_float_array(std::ostream & fs, T * buffer, 
         const GT_DataArrayHandle & handle) {
