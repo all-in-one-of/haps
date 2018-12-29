@@ -2,11 +2,19 @@
 #include <GT/GT_GEODetail.h>
 #include <GT/GT_PrimPolygonMesh.h>
 #include <GT/GT_DAConstantValue.h>
+#ifdef LZ4
+#define FLOAT_PRECISION fpreal32
+#define BINARYMESH_VERSION 4
+#include "lz4.h"
+#else
+#define FLOAT_PRECISION fpreal64
+#define BINARYMESH_VERSION 1
+#endif
 
 namespace HDK_HAPS
 {
 
-constexpr ushort BINARYMESH_VERSION = 1;
+// constexpr ushort BINARYMESH_VERSION = 4;
 
 void write_header(std::fstream &fs) {
     const char   header[]   = {'B', 'I', 'N', 'A', 'R', 'Y', 'M', 'E', 'S', 'H'};
@@ -15,10 +23,11 @@ void write_header(std::fstream &fs) {
     fs.write((char*)&version, 2);
 }
 
-void write_group(std::fstream & fs, const char *group) {
-    const ushort lenght = strlen(group);
-    fs.write((char*)&lenght, sizeof(ushort));
-    fs.write(group, lenght*sizeof(char));
+size_t write_part_name(std::ostream & fs, const char *group) {
+    const ushort length = strlen(group);
+    fs.write((char*)&length, sizeof(ushort));
+    fs.write(group, length*sizeof(char));
+    return sizeof(ushort)+length*sizeof(char);
     
 }
 
@@ -32,27 +41,30 @@ void write_doubles_array(std::fstream & fs, GT_DataArrayHandle & buffer,
 }
 
 template <typename T>
-void write_float_array(std::ostream & fs, T * buffer, 
+size_t write_float_array(std::ostream & fs, T * buffer, 
         const GT_DataArrayHandle & handle) {
     const uint   entries  = handle->entries();
     const size_t bytesize = entries*handle->getTupleSize()*sizeof(T);
     handle->fillArray(buffer, 0, entries, handle->getTupleSize());
     fs.write((char*)&entries, sizeof(uint));
-    fs.write((char*)buffer, bytesize);   
+    fs.write((char*)buffer, bytesize); 
+    return sizeof(uint)+bytesize;  
 }
 
-void write_material_slots(std::fstream &fs, 
+size_t write_material_slots(std::ostream &fs, 
         const std::vector<std::string> &materials){
-
     const ushort slots = materials.size();
     fs.write((char*)&slots, sizeof(ushort));
+    size_t bytes = sizeof(ushort);
 
     for(const auto & item: materials) {
         const char * matname = item.c_str();
         const ushort length = strlen(matname);
         fs.write((char*)&length, sizeof(ushort));
-        fs.write((char*)matname, length*sizeof(char));   
+        fs.write((char*)matname, length*sizeof(char)); 
+        bytes +=  sizeof(ushort) + length*sizeof(char);
     }
+    return bytes;
 }
 
 template<typename T>
@@ -86,14 +98,15 @@ public:
         }
     }
 
-    void save_attribute(std::ostream &fs, const GT_DataArrayHandle & handle) {
+    size_t save_attribute(std::ostream &fs, const GT_DataArrayHandle & handle) {
         assert(handle != nullptr);
         const size_t new_buffer_size = handle->entries()*handle->getTupleSize();
         if (buffersize < new_buffer_size) {
             buffersize = new_buffer_size;
             buffer.reset(new T[buffersize]); 
         }
-        HDK_HAPS::write_float_array<T>(fs, buffer.get(), handle);
+        size_t bytes = HDK_HAPS::write_float_array<T>(fs, buffer.get(), handle);
+        return bytes;
     }
 
     const GT_PrimPolygonMesh * mesh() const { return tesselated; }
@@ -114,39 +127,39 @@ private:
 
 };
 
-template <typename T>
 int save_binarymesh(std::fstream & fs, const GEO_Detail *detail)
 {
     // Prepere for tesselation library GT_
-    TesselatedGeometry<T> geometry(detail);
+    TesselatedGeometry<FLOAT_PRECISION> geometry(detail);
     if (!geometry.isValid()) {
         std::cerr << "Cant create tesselated geometry. \n";
         return 0;
     }
     // header
     write_header(fs);
-    // part name
-    const char* group = "default";
-    write_group(fs, group);
+
     auto positionhandle = geometry.find_attribute("P");
     auto normalhandle   = geometry.find_attribute("N");
     auto uvhandle       = geometry.find_attribute("uv");
-    // TODO: for lz4
-    std::ostringstream compress_cache;
-    geometry.save_attribute(compress_cache, positionhandle);
-    geometry.save_attribute(compress_cache, normalhandle);
-    // size_t size = LZ4_compress((const char*)compress_cace.str(), ....)
-    fs << compress_cache.str();
+    // 
+    std::ostringstream datablock;
+    // part name
+    const char* part_name = "default";
+    size_t bytes  = write_part_name(datablock, part_name);
+           bytes += geometry.save_attribute(datablock, positionhandle);
+           bytes += geometry.save_attribute(datablock, normalhandle);
+    
     // 
     if (uvhandle) {
         // repack vector3 -> vector2
-        auto uvbuffer = std::make_unique<T[]>(uvhandle->entries()*2);
+        auto uvbuffer = std::make_unique<FLOAT_PRECISION[]>(uvhandle->entries()*2);
         uvhandle->fillArray(uvbuffer.get(), GT_Offset(0), GT_Size(uvhandle->entries()), 2);
-        uvhandle = GT_DataArrayHandle(new GT_DANumeric<T>(uvbuffer.get(), GT_Size(uvhandle->entries()), 2));
+        uvhandle = GT_DataArrayHandle(new GT_DANumeric<FLOAT_PRECISION>(uvbuffer.get(), 
+            GT_Size(uvhandle->entries()), 2));
     } else {
         uvhandle = GT_DataArrayHandle(new GT_RealConstant(positionhandle->entries(), 0.0, 2)); 
     }
-    geometry.save_attribute(fs, uvhandle);
+    bytes += geometry.save_attribute(datablock, uvhandle);
     // 
     // Material
     ushort mindex = 0;
@@ -161,7 +174,7 @@ int save_binarymesh(std::fstream & fs, const GEO_Detail *detail)
         }
     } 
     materials.push_back(std::string("default"));
-    write_material_slots(fs, materials);
+    bytes += write_material_slots(datablock, materials);
 
     // faces:
     GT_DataArrayHandle point_indexing; GT_DataArrayHandle uniform_indexing;
@@ -173,7 +186,8 @@ int save_binarymesh(std::fstream & fs, const GEO_Detail *detail)
         vertex_indexing, vert_info, prim_info);
     //
     const uint nfaces = geometry.mesh()->getFaceCount();
-    fs.write((char*)&nfaces, sizeof(uint));
+    datablock.write((char*)&nfaces, sizeof(uint)); 
+    bytes += sizeof(uint);
     //
     const bool normal_on_vert = positionhandle->entries() != normalhandle->entries();
     const bool uv_on_vert     = positionhandle->entries() != uvhandle->entries();
@@ -181,16 +195,18 @@ int save_binarymesh(std::fstream & fs, const GEO_Detail *detail)
     GT_DataArrayHandle vperface = geometry.mesh()->getFaceCounts();
     for(size_t face=0, vidx=0; face<nfaces; ++face) {
         const ushort nvertices = vperface->getI16(GT_Offset(face));
-        fs.write((char*)&nvertices, sizeof(ushort));
+        datablock.write((char*)&nvertices, sizeof(ushort)); 
+        bytes += sizeof(ushort);
         const GT_Offset first_vert_offset = geometry.mesh()->getVertexOffset(GT_Offset(face));
         for (ushort vert=0; vert<nvertices; ++vert, ++vidx) {
             const uint point_index  = point_indexing->getI32(GT_Offset(first_vert_offset+vert));
             const uint vertex_index = vertex_indexing->getI32(vidx);
             const uint normal_index = normal_on_vert ? vertex_index : point_index;
             const uint uv_index     = uv_on_vert     ? vertex_index : point_index;
-            fs.write((char*)&point_index, sizeof(uint)); // point index
-            fs.write((char*)&normal_index, sizeof(uint)); // normal index
-            fs.write((char*)&uv_index, sizeof(uint)); // uv index
+            datablock.write((char*)&point_index, sizeof(uint)); // point index
+            datablock.write((char*)&normal_index, sizeof(uint)); // normal index
+            datablock.write((char*)&uv_index, sizeof(uint)); // uv index
+            bytes += 3*sizeof(uint);
         }
         if (materialhandle) {
             const int materialindex = materialhandle->getStringIndex(face);
@@ -200,8 +216,19 @@ int save_binarymesh(std::fstream & fs, const GEO_Detail *detail)
                 mindex = static_cast<ushort>(materialindex);
             }
         }
-        fs.write((char*)&mindex, sizeof(ushort));
+        datablock.write((char*)&mindex, sizeof(ushort));
+        bytes += sizeof(ushort);
     }
+
+    #ifdef LZ4
+        auto compressed = std::make_unique<char[]>(bytes);
+        auto lz4bytes   = LZ4_compress((const char *)datablock.rdbuf(), compressed.get(), bytes);
+        fs.write((char*)&bytes,     sizeof(size_t));
+        fs.write((char*)&lz4bytes,  sizeof(size_t));
+        fs.write((char*)compressed.get(), lz4bytes);
+    #else
+        fs << datablock.str();
+    #endif
     return 1;
 }
 } // end of namespace HDK_HAPS
