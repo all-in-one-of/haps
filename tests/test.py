@@ -1,5 +1,6 @@
+import sys
+sys.path.append('soho')
 from haps import *
-from haps_types import FORMAT_REVISION
 import json, time
 
 """ 
@@ -147,10 +148,6 @@ def main():
     # with open(filename, 'w') as file: file.write(xml) etc...
 
 
-    # Higher level interface (happleseed.py)
-    # TODO: delegate candidates for higher life existance: 
-    # cameras, lights, configs, spectral colors?
-    import happleseed
     scene   = Scene()
     project = Project().add(scene)
 
@@ -160,27 +157,27 @@ def main():
     assert(project.findall('scene'))
     assert(len(project.findall('scene')) == 1)
 
-    # (1) happleseend_types.Callable() returns HapsObj (possible more than one)
-    import happleseed_types
-    camera1 = happleseed_types.ThinLensCamera('camera', film_dimensions='0.2 .3')
-    camera2 = happleseed_types.ThinLensCamera('camera')
+    # (1) APSframe.Callable() returns HapsObj (possible more than one)
+    import APSframe
+    camera1 = APSframe.ThinLensCamera('camera', film_dimensions='0.2 .3')
+    camera2 = APSframe.ThinLensCamera('camera')
     assert(str(camera2) != str(camera1))
     # TODO: Should we check for duplicates?
     scene.add([camera1, camera2])
 
     assert(len(scene.findall('camera')) == 2)
 
-    # Some happleseed method may return multiply objects: 
-    objects = happleseed_types.Environment('preetham_env', turbidity=2.0) 
+    # Some APSframe method may return multiply objects: 
+    objects = APSframe.Environment('preetham_env', turbidity=2.0) 
     assert(len(objects) == 3)
 
     # (2) maybe with explicite factory (does it bring much to the table?)
-    # better since we have hide objects inside happleseed_types
+    # better since we have hide objects inside APSframe
     scene = Scene()
-    scene.add(happleseed.Factory('Frame','beauty', 
+    scene.add(APSframe.Factory('Frame','beauty', 
         parms=(('resolution' ,[1920, 1080]),),
         camera='renderCam2'))
-    scene.add(happleseed.Factory('Camera', 'renderCam2', 
+    scene.add(APSframe.Factory('Camera', 'renderCam2', 
         parms=(('aspect_ratio',1), ), model="pinhole_camera"))
     
     assert(scene.find("frame"))
@@ -188,8 +185,11 @@ def main():
     assert(scene.find('camera').get('model') == 'pinhole_camera')
     assert(scene.find('frame').get_by_name('resolution').get('value') == [1920, 1080]) 
 
-    apple = happleseed.AppleSeed()
-    # we don't bother
+    # Higher level interface (APSframe.py)
+    # TODO: delegate candidates for higher life existance: 
+    # cameras, lights, configs, spectral colors
+    apple = APSframe.Appleseed()
+    # old school still valid
     apple.project.add(Configurations().add(Configuration("final").add_parms([
         ('frame_renderer', 'generic'), 
         ('tile_renderer', 'generic'),
@@ -199,23 +199,24 @@ def main():
     assert(apple.project.find('configurations').get_by_name('final')\
         .get_by_name('frame_renderer').get('value') == 'generic')
 
-
-    # Yet another way, probably the righ way
     minimal_project = ['<project format_revision="%i">' % FORMAT_REVISION, '<scene>', 
     '<assembly_instance name="assembly_inst" assembly="assembly">','<transform time="0">',
             '<matrix>1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1</matrix>',
             '</transform>', '</assembly_instance>','<assembly name="assembly"/>', 
             '</scene>', '</project>']
 
-    # for now I don't initialize nothing but project. 
-    # We might change it in a while (now first call add defaults)
-    apple = happleseed.AppleSeed()
-    assert(apple.project == Project())
-    apple.Scene()
-    assert(apple.scene == Scene())
-    apple.Assembly()
+    # Prefered way via Appleseed object
+    apple = APSframe.Appleseed()
+    # apple is atm equal to this:
+    project = Project()
+    scene   = Scene()
+    project.add(scene)
+    scene.add(Assembly('assembly')).add(
+        Assembly_Instance('assembly_inst', assembly='assembly').add(
+            Transform().add(Matrix())))
+    
     assert(apple.assembly == Assembly('assembly'))
-    #assert(splitXMLtoWords(str(apple.project)) == minimal_project)
+    assert(apple.project == project)
 
     # Scene returns factory class which is trained to add objects into right place
     apple.Scene().add('Environment', 'preetham_env', turbidity=2.123)
@@ -257,7 +258,7 @@ def main():
     assert(len(apple.scene.findall('assembly_instance')) == 2)
     assert(apple.scene.get_by_name('new_assembly'))
 
-    # apple.config.add(happleseed_types.InteractiveConfiguration('base_interactive'))
+    # apple.config.add(APSframe.InteractiveConfiguration('base_interactive'))
     # FIXME this adds params, not parrent configuration ?
     apple.Config().insert('InteractiveConfiguration', 'base_interactive')
 
