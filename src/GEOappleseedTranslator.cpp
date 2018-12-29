@@ -65,23 +65,25 @@ GEO_HAPSIOTranslator::fileLoad(GEO_Detail *gdp, UT_IStream &is, bool ate_magic)
 GA_Detail::IOStatus
 GEO_HAPSIOTranslator::fileSave(const GEO_Detail *gdp, std::ostream &os)
 {
-    return false;
+    bool result = false;
+    if (os) {
+        result = save_binarymesh(os, gdp);
+    } 
+    return result;
 }
+
 GA_Detail::IOStatus
 GEO_HAPSIOTranslator::fileSaveToFile(const GEO_Detail *gdp, const char *fname)
 {
     if (!fname)
         return false;
-    
-    auto binaryfile = std::fstream(fname, 
-        std::ios::out | std::ios::binary);
 
-    bool result = false;
-    if (binaryfile) {
-        result = save_binarymesh(binaryfile, gdp);
-        binaryfile.close();
-    } 
-
+    auto result = GA_Detail::IOStatus(false);
+    auto stream = std::ofstream(fname, std::ios::out | std::ios::binary);
+    if (stream.is_open()) {
+         result = fileSave(gdp, stream);
+        stream.close();
+    }
     return result;
 }
 
