@@ -130,6 +130,27 @@ class Appleseed(object):
         return self.TypeFactory(self.output)
 
 
+def update_parameters(obj, **kwargs):
+    """Update object's parmaters with provided **kwargs.
+    This is a helper function usually called by objects
+    containing many parameters. TODO: we might move it into some object.
+
+    :parm obj:      HapsObj to be updated
+    :parm **kwargs: Python **kwargs arguments: name_of_parm=new_value
+    :returns:       Modified object
+    """
+    for key, value in kwargs.items():
+        parm = obj.get_by_name(key)
+        # Ignore 
+        if not parm:
+            # logger.debug('Ignoring non existing parm: %s' % key)
+            continue
+        if isinstance(value, collections.Iterable) and \
+        not  isinstance(value, types.StringTypes):
+            value = ' '.join(map(str, value))
+        parm.set('value', value)
+    return obj
+
 
             
 def ThinLensCamera(name, **kwargs):
@@ -150,7 +171,7 @@ def ThinLensCamera(name, **kwargs):
         ("diaphragm_tilt_angle",  0.0),
         ("diaphragm_map",  ''),
         ("near_z",  -0.001)])
-    camera = haps.update_parameters(camera, **kwargs)
+    camera = update_parameters(camera, **kwargs)
     return camera
 
 
@@ -163,11 +184,13 @@ def PinholeCamera(name, **kwargs):
         ("aspect_ratio", 1),
         ("focal_length", 0.035), 
         ("near_z",  -0.001)])
-    camera = haps.update_parameters(camera, **kwargs)
+    camera = update_parameters(camera, **kwargs)
     return camera
 
 # TODO: make choices predefined (enumarator style)
-# Possible values for filters are: blackman-harris (Blackman-Harris), box (Box), catmull (Catmull-Rom Spline), bspline (Cubic B-spline), gaussian (Gaussian), lanczos (Lanczos), mitchell (Mitchell-Netravali), triangle (Triangle).
+# Possible values for filters are: blackman-harris (Blackman-Harris), 
+# box (Box), catmull (Catmull-Rom Spline), bspline (Cubic B-spline), 
+# gaussian (Gaussian), lanczos (Lanczos), mitchell (Mitchell-Netravali), triangle (Triangle).
 
 def Frame(name, **kwargs):
     frame = haps.Frame(name)
@@ -178,7 +201,7 @@ def Frame(name, **kwargs):
         ("tile_size" ,  "16 16"), 
         ("filter",  'blackman-harris'), 
         ("filter_size", 1.5 )])
-    frame = haps.update_parameters(frame, **kwargs)
+    frame = update_parameters(frame, **kwargs)
 
     return frame
 
@@ -192,7 +215,7 @@ def Frame(name, **kwargs):
 #             ("radiance_multiplier" , 1.0),
 #             ("turbidity" , 1.0)
 #         ])
-#     light = haps.update_parameters(light, **kwargs)
+#     light = update_parameters(light, **kwargs)
 #     edf, tmp = EnvironmentEdf('environment_edf')
 #     return light, edf 
 
@@ -219,7 +242,7 @@ def EnvironmentEdf(name, **kwargs):
             ("turbidity" ,"1.0" ),
             ("turbidity_multiplier" ,"1.0" ),
         ])
-    env = haps.update_parameters(env, **kwargs)
+    env = update_parameters(env, **kwargs)
     return env
 
 
@@ -229,7 +252,7 @@ def SpectralColor(name, values=[1,1,1], alpha=1.0, **kwargs):
         ('color_space', 'spectral'),
         ('wavelength_range', '400 700'),])
     color.add(haps.Values(values).add(haps.Alpha([alpha])))
-    color = haps.update_parameters(color, **kwargs)
+    color = update_parameters(color, **kwargs)
     return color
 
 def TransformBlur(obj, xforms):
@@ -382,7 +405,7 @@ def DisneyMaterialLayer(name, layer_number, **kwargs):
             ("specular_tint", "0.0"),
             ("subsurface", "0.0"),
         ])
-    parms = haps.update_parameters(parms, **kwargs)
+    parms = update_parameters(parms, **kwargs)
     return parms
 
 
@@ -396,7 +419,7 @@ def DisneyMaterial(name, layers=1, **kwargs):
                 ("normal_map_up", "z"),
                 ("surface_shader", "surface_shader")
         ])
-    material = haps.update_parameters(material, **kwargs)
+    material = update_parameters(material, **kwargs)
     for layer in range(1, layers+1):
         name = 'layer%i' % layer
         material.add(DisneyMaterialLayer(name, layer, **kwargs))
@@ -411,7 +434,7 @@ def PointLight(name, **kwargs):
         ('intensity', 1.0),
         ('intensity_multiplier', 1.0)
         ])
-    light = haps.update_parameters(light, **kwargs)
+    light = update_parameters(light, **kwargs)
     xform = kwargs.get('xform') if kwargs.get('xform') \
         else haps.Matrix()
     light.add(haps.Transform().add(xform))
