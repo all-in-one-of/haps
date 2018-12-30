@@ -1,7 +1,17 @@
 #pragma once
+#include <GT/GT_RefineParms.h>
+#include <GT/GT_RefineCollect.h>
+#include <GT/GT_DAConstantValue.h>
+// Primitives we'd like to support
 #include <GT/GT_GEODetail.h>
 #include <GT/GT_PrimPolygonMesh.h>
-#include <GT/GT_DAConstantValue.h>
+#include <GT/GT_PrimNuPatch.h>
+#include <GT/GT_PrimNURBSCurveMesh.h>
+#include <GT/GT_GEOPrimTPSurf.h>
+#include <GT/GT_PrimPatch.h>
+
+#include <GA/GA_Range.h>
+#include <cassert>
 #ifdef LZ4
 #include "lz4.h"
 #endif
@@ -71,8 +81,10 @@ public:
     {
         // I'm bothered with this copy. 
         // GT_Primitive makes copies anyway...
+        // TODO: also I would like to copy only suppored prim types.
         if(!gdp->isEmpty()) {
-            gdpcopy.copy(*gdp);
+           gdpcopy.copy(*gdp);
+           // gdpcopy.convex(); // we would like to avoid it
         }
         if (!gdpcopy.isEmpty() && tesselate()) {
             valid = true;
@@ -86,22 +98,67 @@ public:
         if (!consthandle.isValid()) {
             return false;
         }
-        geometry = UTverify_cast<const GT_PrimPolygonMesh *>\
-            (GT_GEODetail::makePolygonMesh(consthandle).get())->convex(); 
+        // TODO: 
+        // This is where more logic should go for other types of primitives.
+        // we could getPrimitiveByType... but then we'd end up with list of lists
+        // for different types and treatment. This is good for now.
+        GA_PrimitiveGroup polygroup(gdpcopy);
+        GA_PrimitiveGroup nurbsgroup(gdpcopy);
+
+        GA_Iterator primit(gdpcopy.getPrimitiveRange());
+        for(; !primit.atEnd(); ++primit) {
+            const auto prim = gdpcopy.getPrimitiveList().get(*primit);
+            if (prim->getTypeId() == GA_PRIMPOLY || prim->getTypeId() == GA_PRIMMESH) { 
+                polygroup.add(prim);
+            } else if (prim->getTypeId() == GA_PRIMNURBSURF) {
+                nurbsgroup.add(prim);
+            }
+        }
+        auto poly_range   = gdpcopy.getPrimitiveRange(&polygroup);
+        auto nurbs_range  = gdpcopy.getPrimitiveRange(&nurbsgroup);
+        auto refine_parms = GT_RefineParms();
+        auto nurbs_refiner= GT_RefineCollect();
+
+        #if 0
+        auto geo_from_nurbs = GT_GEODetail::makeDetail(consthandle, &nurbs_range);
+        if (geo_from_nurbs) {    
+            geo_from_nurbs = GT_Primitive::refinePrimitive(geo_from_nurbs, nullptr);
+            geo_from_nurbs = dynamic_cast<GT_GEOPrimTPSurf *>
+                (geo_from_nurbs.get())->buildSurface(&refine_parms);
+            dynamic_cast<GT_PrimPatch *>
+                (geo_from_nurbs.get())->refineToPolyMesh(nurbs_refiner);
+            auto prims = nurbs_refiner.getPrimCollect();
+            geo_from_nurbs = prims->getPrim(0);
+            auto geo = UTverify_cast<const GT_PrimPolygonMesh *>(geo_from_nurbs.get());
+            geo_from_nurbs = geo->convex();
+            geometries.push_back(geo_from_nurbs.get());
+        }
+        #endif
+
+        if (poly_range.isEmpty()) {
+            return false;
+        }
+        geometry = GT_GEODetail::makePolygonMesh(consthandle, &poly_range, &refine_parms);
+
         if (!geometry) {
+            // probably there wasn't any supported prim types in detail...
             return false;
         }
+
+        geometry = UTverify_cast<const GT_PrimPolygonMesh *>(geometry.get())->convex();
+        assert(geometry);
         tesselated = UTverify_cast<const GT_PrimPolygonMesh *>(geometry.get());
-        if (!tesselated) {           
-            return false;
-        }
+        geometries.push_back(tesselated);
+
         //TODO: should we compute vertex normals instead?
         if (compute_normals) {
-            const GT_PrimPolygonMesh * tmp = tesselated;
-            tesselated = tesselated->createPointNormalsIfMissing();
-            // this is because if normals exist, create*Normals() returns nullptr.
-            if (!tesselated) {
-                tesselated = tmp;
+            for (auto & geo: geometries) {
+                const GT_Primitive * tmp = geo;
+                geo = UTverify_cast<const GT_PrimPolygonMesh *>(geo)->createPointNormalsIfMissing();
+                // this is because if normals exist, create*Normals() returns nullptr.
+                if (!geo) {
+                    geo = tmp;
+                }
             }
         } 
         if (tesselated) {
@@ -142,6 +199,8 @@ private:
     GU_ConstDetailHandle consthandle;
     GT_PrimitiveHandle   geometry;
     GU_Detail            gdpcopy;
+    std::vector<const GT_Primitive *> 
+                            geometries;
     const GT_PrimPolygonMesh * 
                     tesselated  = nullptr;
     std::unique_ptr<T[]> buffer = nullptr;
@@ -210,8 +269,10 @@ int save_binarymesh(std::ostream & fs, const GEO_Detail *detail)
     GT_DataArrayHandle prim_info;
 
     // get all in flat arrays in one shot
+    assert(geometry.mesh()->isConvexed());
     geometry.mesh()->getConvexArrays(point_indexing, uniform_indexing, 
         vertex_indexing, vert_info, prim_info);
+   
     //
     const uint nfaces = geometry.mesh()->getFaceCount();
     datablock.write((char*)&nfaces, sizeof(uint)); 
@@ -243,7 +304,6 @@ int save_binarymesh(std::ostream & fs, const GEO_Detail *detail)
         }
         datablock.write((char*)&mindex, sizeof(ushort));
     }
-
     #ifdef USE_LZ4
         datablock.seekp(0, std::ios::end);
         size_t bytes        = datablock.tellp(); datablock.seekg(0, std::ios::beg);

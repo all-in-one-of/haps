@@ -10,7 +10,7 @@
 #include <iostream>
 #include <fstream>
 #include "binarymesh.h"
-#include <stdio.h>
+// #include <stdio.h>
 
 
 namespace HDK_HAPS 
