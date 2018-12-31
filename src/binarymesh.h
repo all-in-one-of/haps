@@ -124,10 +124,8 @@ public:
         auto geo_from_nurbs = GT_GEODetail::makeDetail(consthandle, &nurbs_range);
         if (geo_from_nurbs) {    
             geo_from_nurbs = GT_Primitive::refinePrimitive(geo_from_nurbs, nullptr);
-            geo_from_nurbs = dynamic_cast<GT_GEOPrimTPSurf *>
-                (geo_from_nurbs.get())->buildSurface(&refine_parms);
-            dynamic_cast<GT_PrimPatch *>
-                (geo_from_nurbs.get())->refineToPolyMesh(nurbs_refiner);
+            geo_from_nurbs = dynamic_cast<GT_GEOPrimTPSurf *>(geo_from_nurbs.get())->buildSurface(&refine_parms);
+            dynamic_cast<GT_PrimPatch *>(geo_from_nurbs.get())->refineToPolyMesh(nurbs_refiner);
             auto prims = nurbs_refiner.getPrimCollect();
             geo_from_nurbs = prims->getPrim(0);
             auto geo = UTverify_cast<const GT_PrimPolygonMesh *>(geo_from_nurbs.get());
