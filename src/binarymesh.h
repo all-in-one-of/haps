@@ -77,6 +77,7 @@ template<typename T>
 class TesselatedGeometry
 {
 public:
+    using GT_DataArrayVector = std::vector<GT_DataArrayHandle>;
     TesselatedGeometry(const GEO_Detail * gdp) 
     {
         // I'm bothered with this copy. 
@@ -119,7 +120,7 @@ public:
         auto refine_parms = GT_RefineParms();
         auto nurbs_refiner= GT_RefineCollect();
 
-        #if 0
+        #if 1
         auto geo_from_nurbs = GT_GEODetail::makeDetail(consthandle, &nurbs_range);
         if (geo_from_nurbs) {    
             geo_from_nurbs = GT_Primitive::refinePrimitive(geo_from_nurbs, nullptr);
@@ -132,6 +133,7 @@ public:
             auto geo = UTverify_cast<const GT_PrimPolygonMesh *>(geo_from_nurbs.get());
             geo_from_nurbs = geo->convex();
             geometries.push_back(geo_from_nurbs.get());
+            collection.appendPrimitive(geo_from_nurbs);
         }
         #endif
 
@@ -149,6 +151,7 @@ public:
         assert(geometry);
         tesselated = UTverify_cast<const GT_PrimPolygonMesh *>(geometry.get());
         geometries.push_back(tesselated);
+        collection.appendPrimitive(geometry);
 
         //TODO: should we compute vertex normals instead?
         if (compute_normals) {
@@ -168,15 +171,27 @@ public:
     }
 
     GT_DataArrayHandle find_attribute(const char* attr, GT_Owner owner=GT_OWNER_INVALID, 
+        const bool only_used_points=false, const GT_Primitive * prim=nullptr) 
+    {
+        if (!prim) {
+            prim = tesselated;
+        }
+        assert(prim != nullptr);
+        // make special case for P using getUsedPointList()
+        return prim->findAttribute(UT_StringRef(attr), owner, 0);
+    }
+
+    GT_DataArrayVector find_attributes(const char* attr, GT_Owner owner=GT_OWNER_INVALID, 
         const bool only_used_points=false) 
     {
-        // make special case for P using getUsedPointList()
-        if (owner == GT_OWNER_INVALID) {
-            // take any attr class by default (start with vertex and proceed upwards)
-            return tesselated->findAttribute(UT_StringRef(attr), vertex_owner, 0);
-        } else {
-           return tesselated->findAttribute(UT_StringRef(attr), owner, 0);
+        GT_DataArrayVector arrays;
+        for(size_t p=0; p<collection.entries(); ++p) {
+            auto part = collection.getPrim(p);
+            auto data = find_attribute(attr, owner, only_used_points, part.get());
+            if (data)
+                arrays.push_back(data);
         }
+        return arrays;
     }
 
     size_t save_attribute(std::ostream &fs, const GT_DataArrayHandle & handle) 
@@ -185,13 +200,25 @@ public:
         const size_t new_buffer_size = handle->entries()*handle->getTupleSize();
         if (buffersize < new_buffer_size) {
             buffersize = new_buffer_size;
-            buffer.reset(new T[buffersize]); 
+            buffer.reset(new T[buffersize]);
+            assert(buffer); 
         }
         size_t bytes = HDK_HAPS::write_float_array<T>(fs, buffer.get(), handle);
         return bytes;
     }
 
-    const GT_PrimPolygonMesh * mesh() const { return tesselated; }
+    size_t save_attributes(std::ostream &fs, const GT_DataArrayVector & handles) 
+    {
+        size_t bytes = 0;
+        for(auto & handle: handles) { 
+            bytes += save_attribute(fs, handle);
+        }
+        return bytes;   
+    }
+
+    const GT_PrimPolygonMesh * mesh()   const { return tesselated; }
+    const GT_PrimCollect     * parts()  const { return &collection; }
+
     bool                    isValid() const { return valid; }
 
 private:
@@ -199,6 +226,7 @@ private:
     GU_ConstDetailHandle consthandle;
     GT_PrimitiveHandle   geometry;
     GU_Detail            gdpcopy;
+    GT_PrimCollect       collection;
     std::vector<const GT_Primitive *> 
                             geometries;
     const GT_PrimPolygonMesh * 
@@ -233,6 +261,8 @@ int save_binarymesh(std::ostream & fs, const GEO_Detail *detail)
     const char* part_name = "default";
     write_part_name(datablock, part_name);
     //
+    // auto positions = geometry.find_attributes("P");
+    // geometry.save_attributes(datablock, positions);
     geometry.save_attribute(datablock, positionhandle);
     geometry.save_attribute(datablock, normalhandle);
 
