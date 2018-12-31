@@ -52,6 +52,8 @@ class Color(HapsObj):
 class Alpha(HapsVal):
     def __init__(self, values):
         super(Alpha, self).__init__(values)
+        assert(isinstance(values, collections.Iterable))
+        assert(len(values) == 1)
         self.set('text', values)
     
 
