@@ -1,0 +1,203 @@
+# Dialog script for appleseed automatically generated
+
+{
+    name	appleseed
+    script	appleseed
+    label	Appleseed
+
+    help {
+	""
+    }
+
+    group {
+        name    "properties"
+        label   "Properties"
+
+        parm {
+            name    "soho_program"
+            label   "soho Program"
+            type    file
+            invisible
+            default { "appleseed.py" }
+            parmtag { "filechooser_mode" "read" }
+        }
+        parm {
+            name    "soho_shopstyle"
+            label   "soho SHOP Style"
+            type    string
+            invisible
+            default { "RIB" }
+        }
+    }
+
+    parm {
+        name    "execute"
+        baseparm
+        label   "Render to Disk"
+        joinnext
+        export  none
+    }
+    parm {
+        name    "renderpreview"
+        baseparm
+        label   "Render to MPlay"
+        joinnext
+        export  none
+    }
+    parm {
+        name    "executebackground"
+        baseparm
+        label   "Render to Disk in Background"
+        joinnext
+        export  none
+    }
+    parm {
+        name    "renderdialog"
+        baseparm
+        label   "Controls..."
+        nolabel
+        export  none
+    }
+    parm {
+        name    "trange"
+        baseparm
+        label   "Valid Frame Range"
+        export  none
+    }
+    parm {
+        name    "f"
+        baseparm
+        label   "Start/End/Inc"
+        export  none
+    }
+    parm {
+        name    "take"
+        baseparm
+        label   "Render With Take"
+        export  none
+    }
+    group {
+        name    "properties_3"
+        label   "Driver"
+
+        parm {
+            name    "target"
+            label   "Render Target"
+            type    string
+            invisible
+            default { "prman21.0" }
+            menu {
+                [ "echo `pythonexprs(\"__import__('toolutils').parseDialogScriptMenu('RIBtargets', [('3Delight6.5','3Delight 6.5'), ('3Delight8.5','3Delight 8.5'), ('3Delight9.0','3Delight 9.0'), ('air4.0','AIR 4.0'), ('air6.0','AIR 6.0'), ('prman17.0', 'prman 17.0'), ('prman18.0', 'prman 18.0'), ('prman19.0', 'prman 19.0'), ('prman20.0', 'prman 20.0'), ('prman21.0', 'prman 21.0'), ('rdc3.4','RenderDotC 3.4')])\")`" ]
+            }
+        }
+        parm {
+            name    "ri_backend"
+            label   "RIB Backend"
+            type    string
+            invisible
+            default { "soho" }
+            disablewhen "{ target != prman17.0 target != prman18.0 target != prman19.0 target != prman20.0 target != prman21.0 }"
+            menu {
+                "soho"      "SOHO Backend"
+                "prman"     "PRMan For Python"
+                "python"    "Generate Python Code"
+            }
+        }
+        parm {
+            name    "ri_begin"
+            label   "RiBegin"
+            type    file
+            invisible
+            default { "__render" }
+            disablewhen "{ ri_backend == soho }"
+        }
+        parm {
+            name    "soho_pipecmd"
+            label   "Command"
+            type    file
+            default { "" }
+            disablewhen "{ soho_outputmode != off }"
+            menureplace {
+                "renderdl"  "3Delight"
+                "air"       "AIR"
+                "prman"     "Pixar's RenderMan"
+                "renderdc"  "Render Dot C"
+            }
+            parmtag { "filechooser_mode" "read" }
+        }
+        parm {
+            name    "soho_outputmode"
+            label   "SOHO Output Mode"
+            type    ordinal
+            invisible
+            default { "if(strmatch('prman*',chs('target')) && strcmp(chs('ri_backend'),'prman')==0, 2, ch('rib_outputmode'))" }
+            menu {
+                "off"   "Command"
+                "on"    "Disk file"
+                "user"  "No Output"
+            }
+        }
+        parm {
+            name    "rib_outputmode"
+            label   "Save RIB File To Disk"
+            type    toggle
+            nolabel
+            joinnext
+            default { "0" }
+            disablewhen "{ soho_outputmode == user }"
+        }
+        parm {
+            name    "soho_diskfile"
+            label   "Disk File"
+            type    file
+            default { "$HIP/${OS}.appleseed" }
+            disablewhen "{ soho_outputmode != on }"
+            parmtag { "filechooser_mode" "write" }
+        }
+        parm {
+            name    "soho_foreground"
+            label   "Block Until Render Complete"
+            type    toggle
+            default { "0" }
+            disablewhen "{ soho_outputmode != off }"
+        }
+        parm {
+            name    "soho_mkpath"
+            label   "Create Intermediate Directories"
+            type    toggle
+            default { "1" }
+        }
+        parm {
+            name    "soho_initsim"
+            label   "Initialize Simulation OPs"
+            type    toggle
+            invisible
+            default { "0" }
+        }
+        parm {
+            name    "soho_viewport_menu"
+            label   "Show In Viewport Menu"
+            type    toggle
+            invisible
+            default { "strcmp(chs('ri_backend'),'python')!=0" }
+            help    "By default SOHO output drivers do not appear in the viewport menu.  Adding this property and turning it on will cause the driver to show up."
+        }
+        parm {
+            name    "soho_previewsupport"
+            label   "Preview Supported"
+            type    toggle
+            invisible
+            default { "1" }
+        }
+        parm {
+            name    "shop_propertiespath"
+            label   "Default Options/Attributes"
+            type    oppath
+            invisible
+            default { "" }
+            parmtag { "opfilter" "!!SHOP/PROPERTIES!!" }
+            parmtag { "oprelative" "." }
+        }
+    }
+
+}
