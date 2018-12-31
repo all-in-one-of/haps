@@ -2,6 +2,15 @@ import collections, types
 from collections import defaultdict, OrderedDict
 
 HAPS_DEBUG=True
+# https://stackoverflow.com/questions/10844064/
+# items-in-json-object-are-out-of-order-using-json-dumps
+import json
+class OrderedJsonEncoder(json.JSONEncoder):
+   def encode(self,o):
+      if isinstance(o, OrderedDict):
+         return "{" + ",".join( [ self.encode(k)+":"+self.encode(v) for (k,v) in o.iteritems() ] ) + "}"
+      else:
+         return simplejson.JSONEncoder.encode(self, o)
 
 class XMLTokens(defaultdict):
     text_template    ='{nl}{wh}{text}{nl}{wh2}{start}{tag}{end}'
@@ -48,7 +57,7 @@ class Element(OrderedDict):
             if key == self.attribute_token:
                 continue
             for v in values:
-                yield v 
+                yield v
 
     def __repr__(self):
         return super(Element, self).__repr__()
@@ -154,7 +163,9 @@ class Element(OrderedDict):
     def tojson(self, indent=2):
         """Return json representation of current element."""
         from json import dumps
-        return dumps(self, indent=indent)
+        # return dumps(self, indent=indent)
+        encoder = OrderedJsonEncoder()
+        return encoder.encode(self)
 
     def toxml(self, fileio, pretty_print=True, indent=4, _level=0):
         """Render element and its children into XML document.
