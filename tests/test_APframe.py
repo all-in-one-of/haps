@@ -1,6 +1,6 @@
 import unittest
 import sys
-sys.path.append('/Users/symek/work/haps/soho')
+sys.path.append('soho')
 import haps
 import APSframe
 
