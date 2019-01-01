@@ -168,7 +168,7 @@ def ThinLensCamera(name, **kwargs):
     camera.add_parms([
         ("shutter_open_time", 0.0001),
         ("shutter_close_time",   1.0),
-        ("film_dimensions", [0,0]), # FIXME:
+        ("film_dimensions", '18.7 24.9'), # FIXME:
         ("film_width", 1280), 
         ("film_height", 720),
         ("aspect_ratio", 1),
@@ -190,9 +190,10 @@ def PinholeCamera(name, **kwargs):
     camera.add_parms([
         ("shutter_open_time", '0.0'),
         ("shutter_close_time",   1.0),
-        ("film_dimensions", '0.01280 0.0720'),
-        ("aspect_ratio", 1),
-        ("focal_length", 0.035), 
+        # ("film_dimensions", '18.7 24.9'), # mm super35
+        # ("aspect_ratio", 1),
+        # ("focal_length", 24), #mm
+        ("horizontal_fov",   45),
         ("near_z",  -0.001)])
     camera = update_parameters(camera, **kwargs)
     return camera
@@ -290,7 +291,7 @@ def MeshObject(name, filename, **kwargs):
     """
     obj = haps.Object(name, model='mesh_object')
     obj.add(haps.Parameter('filename', filename))
-    obj_name = '.'.join([obj.get('name'), '0']) #FIXME: is it general or only for obj without groups?
+    obj_name = '.'.join([obj.get('name'), 'default']) #FIXME: is it general or only for obj without groups?
     obj_inst = haps.Object_Instance(name+'_inst', object=obj_name)
 
     # xforms
