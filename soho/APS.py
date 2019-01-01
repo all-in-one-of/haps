@@ -6,8 +6,8 @@ import sohog
 import hou
 from soho import SohoParm
 
-GEOPATH   = os.path.join(os.getcwd(), 'tmp')
-EXTENSION = ".obj" # TODO replace with .appleseed
+GEOPATH   = os.path.join(os.getcwd(), '')
+EXTENSION = '.binarymesh'# ".binarymesh" #
 
 # IFDhooks.call("pre_ifdGen")
 clockstart = time.time()
@@ -164,6 +164,7 @@ FPSinv = 1.0 / FPS
 
 import haps
 import APSframe as APSobj
+reload(APSobj)
 
 
 aps = APSobj.Appleseed()
@@ -174,24 +175,29 @@ def get_obj_filename(obj, group='', ext=EXTENSION):
     objectname = obj.getName().replace("/", "_")[1:] + group + ext
     return os.path.join(GEOPATH, objectname)
 
-
-camera_parms = {'film_dimensions': (cam.getDefaultedInt('res', now, [0,0])[0],
-                                    cam.getDefaultedInt('res', now, [0,0])[1])
-    
-            ,   'shutter_open_time':  0.0 # FIXME (in mantra this lives on rop)
+from math import atan, degrees
+aperture = cam.getDefaultedFloat('aperture', now, [1])[0]
+focal    = cam.getDefaultedFloat('focal', now, [24])[0]
+fovx     =  2 * atan((aperture/2) / focal)    
+camera_parms = {'shutter_open_time' : 0.0 # FIXME (in mantra this lives on rop)
             ,   'shutter_close_time': cam.getDefaultedFloat('shutter', now, [0])[0]
-            ,   'aspect_ratio':       cam.getDefaultedFloat('aspect', now, [1])[0]
-            ,   'focal_length':       cam.getDefaultedFloat('focal', now, [24])[0] * 30
-            ,   'near_z':             cam.getDefaultedFloat('near', now, [0.1])[0] * -1
+            ,   'horizontal_fov'    : degrees(fovx)    
+            ,   'near_z'            : cam.getDefaultedFloat('near', now, [0.1])[0] * -1
     }
 
+
+def exportSOPMaterial(material_path):
+    pass
+    # print material_path
 
 ##### CAMERA - Pinhole camera - for now ###################
 camera = APSobj.PinholeCamera(cam.getName(), **camera_parms)
 xform  = []
 if cam.evalFloat("space:world", now, xform):
+    xform = hou.Matrix4(xform).transposed().asTuple()
     camera.add(haps.Transform(time=now).add(
         haps.Matrix(xform)))
+# camera.add(haps.Transform(time=now).add(haps.Matrix()))
 
 scene.add(camera)
 assembly.add(APSobj.DefaultLambertMaterial('default_material'))
@@ -205,16 +211,17 @@ for obj in soho.objectList('objlist:instance'):
         continue
 
     parts = gdp.partition('geo:partattrib', 'shop_materialpath')
-	#gdp.tesselate({'geo:convstyle':'lod', 'geo:triangulate':True})
+    gdp.tesselate({'geo:convstyle':'lod', 'geo:triangulate':True})
+    
     options = { "geo:saveinfo":False, 
                 "json:textwidth":0, 
                 "geo:skipsaveindex":True, 
                 'savegroups':True, 
                 'geo:savegroups':True}
 
-    # for group, part in parts.items():
-    #     group = group.replace('/', '_')
-    # sys.stderr.write(filename)
+    for group, part in parts.items():
+        exportSOPMaterial(group)
+    
     filename = get_obj_filename(obj, '')
     if not gdp.save(filename, options):
         sys.stderr.write("Can't save geometry from {} to {}".format(soppath, filename))
@@ -229,11 +236,13 @@ for obj in soho.objectList('objlist:instance'):
 for light in soho.objectList('objlist:light'):
     xform = []
     light.evalFloat('space:world', now, xform)
+    xform = hou.Matrix4(xform).transposed().asTuple()
     aps.Assembly().insert('PointLight', light.getName(), xform=haps.Matrix(xform))
 
 ############ - Frame - basics - ##################################
-aps.Output().insert('Frame', 'beauty', resolution=camera_parms['film_dimensions'], 
-    crop_window=(0,0,camera_parms['film_dimensions'][0], camera_parms['film_dimensions'][1]),
+resolution = (cam.getDefaultedInt('res', now, [0,0])[0], cam.getDefaultedInt('res', now, [0,0])[1])
+aps.Output().insert('Frame', 'beauty', resolution=resolution, 
+    crop_window=(0,0,resolution[0], resolution[1]),
     camera=camera.get('name'))
 
 
@@ -241,10 +250,12 @@ aps.Output().insert('Frame', 'beauty', resolution=camera_parms['film_dimensions'
 aps.Config().insert('FinalConfiguration', 'final')
 aps.Config().insert('InteractiveConfiguration', 'interactive')
 
-with open('/tmp/aps.appleseed', 'w') as file:
+
+parm = {'diskfile': SohoParm('soho_diskfile', 'string', ['*'], False)}
+parmlist = soho.evaluate(parm)
+filename = parmlist['soho_diskfile'].Value[0]
+with open(filename, 'w') as file:
     file.write(str(aps.project))
-
-
 
 
 
