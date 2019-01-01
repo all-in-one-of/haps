@@ -51,6 +51,7 @@ size_t write_float_array(std::ostream & fs, T * buffer,
         const GT_DataArrayHandle & handle) {
     const uint   entries  = handle->entries();
     const size_t bytesize = entries*handle->getTupleSize()*sizeof(T);
+    // Does really fillArray type convertion?
     handle->fillArray(buffer, 0, entries, handle->getTupleSize());
     fs.write((char*)&entries, sizeof(uint));
     fs.write((char*)buffer, bytesize); 
@@ -85,7 +86,6 @@ public:
         // TODO: also I would like to copy only suppored prim types.
         if(!gdp->isEmpty()) {
            gdpcopy.copy(*gdp);
-           // gdpcopy.convex(); // we would like to avoid it
         }
         if (!gdpcopy.isEmpty() && tesselate()) {
             valid = true;
@@ -103,6 +103,7 @@ public:
         // This is where more logic should go for other types of primitives.
         // we could getPrimitiveByType... but then we'd end up with list of lists
         // for different types and treatment. This is good for now.
+        // Note: soho tesselates geometry anyway before export right?
         GA_PrimitiveGroup polygroup(gdpcopy);
         GA_PrimitiveGroup nurbsgroup(gdpcopy);
 
@@ -120,7 +121,7 @@ public:
         auto refine_parms = GT_RefineParms();
         auto nurbs_refiner= GT_RefineCollect();
 
-        #if 1
+        #if 0
         auto geo_from_nurbs = GT_GEODetail::makeDetail(consthandle, &nurbs_range);
         if (geo_from_nurbs) {    
             geo_from_nurbs = GT_Primitive::refinePrimitive(geo_from_nurbs, nullptr);
@@ -148,11 +149,12 @@ public:
         geometry = UTverify_cast<const GT_PrimPolygonMesh *>(geometry.get())->convex();
         assert(geometry);
         tesselated = UTverify_cast<const GT_PrimPolygonMesh *>(geometry.get());
-        geometries.push_back(tesselated);
-        collection.appendPrimitive(geometry);
+        // geometries.push_back(tesselated);
+        // collection.appendPrimitive(geometry);
 
         //TODO: should we compute vertex normals instead?
         if (compute_normals) {
+            #if 0
             for (auto & geo: geometries) {
                 const GT_Primitive * tmp = geo;
                 geo = UTverify_cast<const GT_PrimPolygonMesh *>(geo)->createPointNormalsIfMissing();
@@ -161,6 +163,13 @@ public:
                     geo = tmp;
                 }
             }
+            #else
+                const GT_PrimPolygonMesh * tmp = tesselated;
+                tesselated =  UTverify_cast<const GT_PrimPolygonMesh *>(tesselated)->createPointNormalsIfMissing();
+                if (!tesselated)
+                    tesselated = tmp;
+            #endif
+
         } 
         if (tesselated) {
             return true; 
@@ -297,6 +306,7 @@ int save_binarymesh(std::ostream & fs, const GEO_Detail *detail)
     GT_DataArrayHandle prim_info;
 
     // get all in flat arrays in one shot
+    // FIXME: it won't pass if only triangles are preset in geoemtry. 
     assert(geometry.mesh()->isConvexed());
     geometry.mesh()->getConvexArrays(point_indexing, uniform_indexing, 
         vertex_indexing, vert_info, prim_info);
