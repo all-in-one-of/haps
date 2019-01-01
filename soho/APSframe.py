@@ -190,9 +190,9 @@ def PinholeCamera(name, **kwargs):
     camera.add_parms([
         ("shutter_open_time", '0.0'),
         ("shutter_close_time",   1.0),
-        # ("film_dimensions", '18.7 24.9'), # mm super35
+        ("film_dimensions", '18.7 24.9'), # mm super35
         # ("aspect_ratio", 1),
-        # ("focal_length", 24), #mm
+        ("focal_length", 24), #mm
         ("horizontal_fov",   45),
         ("near_z",  -0.001)])
     camera = update_parameters(camera, **kwargs)
@@ -304,14 +304,16 @@ def MeshObject(name, filename, **kwargs):
 
     # materials:
     if not kwargs.get('material'):
+        slot     = 'default'
         material = 'default_material'
     else:
+        slot     = kwargs.get('material')
         material = kwargs.get('material')
 
     obj_inst.add(haps.Assign_Material(None, 
-        slot='default', side='front', material=material))
+        slot=slot, side='front', material=material))
     obj_inst.add(haps.Assign_Material(None, 
-        slot='default', side='back', material=material))
+        slot=slot, side='back', material=material))
 
     return obj, obj_inst
 

@@ -164,6 +164,9 @@ FPSinv = 1.0 / FPS
 
 import haps
 import APSframe as APSobj
+import APSmisc
+reload(APSmisc)
+reload(haps)
 reload(APSobj)
 
 
@@ -175,20 +178,29 @@ def get_obj_filename(obj, group='', ext=EXTENSION):
     objectname = obj.getName().replace("/", "_")[1:] + group + ext
     return os.path.join(GEOPATH, objectname)
 
+def exportSOPMaterial(assembly, material_path):
+    # tmp
+    material = APSobj.DefaultLambertMaterial(material_path)
+    assembly.add(material)
+    return material
+
+
 from math import atan, degrees
 aperture = cam.getDefaultedFloat('aperture', now, [1])[0]
 focal    = cam.getDefaultedFloat('focal', now, [24])[0]
 fovx     =  2 * atan((aperture/2) / focal)    
 camera_parms = {'shutter_open_time' : 0.0 # FIXME (in mantra this lives on rop)
             ,   'shutter_close_time': cam.getDefaultedFloat('shutter', now, [0])[0]
+            ,   'film_dimensions'   : (cam.getDefaultedInt('res', now, [0,0])[0] / 100.0, 
+                                       cam.getDefaultedInt('res', now, [0,0])[1] / 100.0)
+            ,   'focal_length'      : cam.getDefaultedInt('focal', now, [0,0])[0] / 100.0
             ,   'horizontal_fov'    : degrees(fovx)    
             ,   'near_z'            : cam.getDefaultedFloat('near', now, [0.1])[0] * -1
     }
 
 
-def exportSOPMaterial(material_path):
-    pass
-    # print material_path
+ipr_socket = cam.getDefaultedInt('vm_image_mplay_socketport', now, [123])[0]
+mb_parm    = APSmisc.initializeMotionBlur(cam, now)
 
 ##### CAMERA - Pinhole camera - for now ###################
 camera = APSobj.PinholeCamera(cam.getName(), **camera_parms)
@@ -197,10 +209,9 @@ if cam.evalFloat("space:world", now, xform):
     xform = hou.Matrix4(xform).transposed().asTuple()
     camera.add(haps.Transform(time=now).add(
         haps.Matrix(xform)))
-# camera.add(haps.Transform(time=now).add(haps.Matrix()))
 
 scene.add(camera)
-assembly.add(APSobj.DefaultLambertMaterial('default_material'))
+exportSOPMaterial(assembly, 'default_material')
 
 ##### Basic objects - /obj level - #############################
 for obj in soho.objectList('objlist:instance'):
@@ -211,7 +222,7 @@ for obj in soho.objectList('objlist:instance'):
         continue
 
     parts = gdp.partition('geo:partattrib', 'shop_materialpath')
-    gdp.tesselate({'geo:convstyle':'lod', 'geo:triangulate':True})
+    gdp.tesselate({'geo:convstyle':'div', 'geo:triangulate':False, 'tess:polysides':3})
     
     options = { "geo:saveinfo":False, 
                 "json:textwidth":0, 
@@ -219,8 +230,10 @@ for obj in soho.objectList('objlist:instance'):
                 'savegroups':True, 
                 'geo:savegroups':True}
 
+    material_name = None
     for group, part in parts.items():
-        exportSOPMaterial(group)
+        material = exportSOPMaterial(assembly, group)
+        material_name = group
     
     filename = get_obj_filename(obj, '')
     if not gdp.save(filename, options):
@@ -229,8 +242,7 @@ for obj in soho.objectList('objlist:instance'):
 
     xform = []
     obj.evalFloat("space:world", now, xform)
-    aps.Assembly().insert('MeshObject', obj.getName(), 
-        filename=filename, xform=haps.Matrix(xform))
+    aps.Assembly().insert('MeshObject', obj.getName(), filename=filename, xform=haps.Matrix(xform), material=material_name)
 
 ###### Basic lights ######################################
 for light in soho.objectList('objlist:light'):
@@ -256,6 +268,8 @@ parmlist = soho.evaluate(parm)
 filename = parmlist['soho_diskfile'].Value[0]
 with open(filename, 'w') as file:
     file.write(str(aps.project))
+
+
 
 
 
