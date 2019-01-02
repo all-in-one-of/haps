@@ -266,6 +266,17 @@ def SpectralColor(name, values=[1,1,1], alpha=1.0, **kwargs):
     color = update_parameters(color, **kwargs)
     return color
 
+
+def Color(name, values=[1,1,1], alpha=1.0, **kwargs):
+    color = haps.Color(name)
+    color.add_parms([
+        ('color_space', 'linear_rgb'),
+        ('multiplier', '1.0'),])
+    color.add(haps.Values(values)).add(haps.Alpha([alpha]))
+    color = update_parameters(color, **kwargs)
+    return color
+    
+
 def TransformBlur(obj, xforms):
     """Insert series of Transform object from provided matrices
     :parm obj:    Assembly, Object, Light, etc
@@ -397,8 +408,6 @@ def DefaultLambertMaterial(name, color=[.5,.5,.5]):
     return rgb, bsdf, shader, material
 
 
-
-
 def DisneyMaterialLayer(name, layer_number, **kwargs):
     parms = haps.Parameters(name)
     parms.add_parms([
@@ -449,9 +458,15 @@ def PointLight(name, **kwargs):
         ('intensity_multiplier', 1.0)
         ])
     light = update_parameters(light, **kwargs)
-    xform = kwargs.get('xform') if kwargs.get('xform') \
+
+    # xforms
+    xform = kwargs.get('xform') if kwargs.get('xform')\
         else haps.Matrix()
-    light.add(haps.Transform().add(xform))
+    if not kwargs.get('xforms'):
+        light.add(haps.Transform().add(xform))
+    else:
+        light = TransformBlur(light, kwargs.get('xforms'))
+
     return light
 
 
