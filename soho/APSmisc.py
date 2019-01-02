@@ -11,6 +11,15 @@ objXformMotion = [
 
 HOUDINI_TEMP_DIR   = '$HOUDINI_TEMP_DIR/ifds/storage'
 HOUDINI_SHARED_DIR = '$HIP/ifds/storage'
+EXTENSION          = '.binarymesh' # .obj
+# GEOMETRY_PATH      =  getLocalStoragePath()
+DEFAULT_MATERIAL_NAME = 'default'
+
+def get_obj_filename(obj, group='', ext=EXTENSION):
+    objectname = obj.getName().replace("/", "_")[1:] + group + ext
+    geometrypath = getLocalStoragePath()
+    return os.path.join(geometrypath, objectname)
+
 
 def ouputMotionBlurInfo(obj, now, CameraBlur, required=False):
     motionInfo = {

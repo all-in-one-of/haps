@@ -172,21 +172,14 @@ reload(APSsettings)
 FPS = soho.getDefaultedFloat('state:fps', [24])[0]
 FPSinv = 1.0 / FPS
 GEOPATH   = os.path.join(os.getcwd(), '')
-EXTENSION = '.binarymesh' # .obj
 # How to choose among those?
 # GEOPATH = getSharedStoragePath()
-GEOPATH = APSmisc.getLocalStoragePath()
-DEFAULT_MATERIAL_NAME = 'default'
-
 
 
 aps = APSobj.Appleseed()
 scene = aps.scene
 assembly = aps.assembly
 
-def get_obj_filename(obj, group='', ext=EXTENSION):
-    objectname = obj.getName().replace("/", "_")[1:] + group + ext
-    return os.path.join(GEOPATH, objectname)
 
 def exportSOPMaterial(assembly, material_path):
     # tmp
@@ -221,7 +214,7 @@ if cam.evalFloat("space:world", now, xform):
         haps.Matrix(xform)))
 
 scene.add(camera)
-exportSOPMaterial(assembly, DEFAULT_MATERIAL_NAME)
+exportSOPMaterial(assembly, APSmisc.DEFAULT_MATERIAL_NAME)
 
 ##### Basic objects - /obj level - #############################
 for obj in soho.objectList('objlist:instance'):
@@ -240,13 +233,13 @@ for obj in soho.objectList('objlist:instance'):
                 'savegroups':True, 
                 'geo:savegroups':True}
 
-    material_name = DEFAULT_MATERIAL_NAME
+    material_name = APSmisc.DEFAULT_MATERIAL_NAME
     for group, part in parts.items():
         if group:
             material = exportSOPMaterial(assembly, group)
             material_name = group
     
-    filename = get_obj_filename(obj, '')
+    filename = APSmisc.get_obj_filename(obj, '')
     if not gdp.save(filename, options):
         sys.stderr.write("Can't save geometry from {} to {}".format(soppath, filename))
         continue
@@ -255,13 +248,14 @@ for obj in soho.objectList('objlist:instance'):
     xforms = APSmisc.get_motionblur_xforms(obj, now, mblur_parms)
     xforms = [haps.Matrix(xform) for xform in xforms]
     aps.Assembly().insert('MeshObject', obj.getName(), filename=filename, 
-        xforms=xforms, material=material_name)
+        xforms=xforms, material=material_name, slot=material_name)
 
 ###### Basic lights ######################################
 for light in soho.objectList('objlist:light'):
    
     apslight = APSframe.outputLight(light, now, mblur_parms)
-    aps.Assembly().emplace(apslight)
+    if apslight:
+        aps.Assembly().emplace(apslight)
     
 
 ############ - Frame - basics - ##################################

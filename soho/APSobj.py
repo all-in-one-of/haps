@@ -316,9 +316,9 @@ def MeshObject(name, filename, **kwargs):
     # materials:
     if not kwargs.get('material'):
         slot     = 'default'
-        material = 'default_material'
+        material = 'default'
     else:
-        slot     = kwargs.get('material')
+        slot     = kwargs.get('slot')
         material = kwargs.get('material')
 
     obj_inst.add(haps.Assign_Material(None, 
@@ -458,7 +458,6 @@ def PointLight(name, **kwargs):
         ('intensity_multiplier', 1.0)
         ])
     light = update_parameters(light, **kwargs)
-
     # xforms
     xform = kwargs.get('xform') if kwargs.get('xform')\
         else haps.Matrix()
@@ -466,8 +465,22 @@ def PointLight(name, **kwargs):
         light.add(haps.Transform().add(xform))
     else:
         light = TransformBlur(light, kwargs.get('xforms'))
-
     return light
+
+
+def Edf(name, model, **kwargs):
+    edf = haps.Edf(name, model=model)
+    edf.add_parms([
+        ("cast_indirect_light", True),
+        ("importance_multiplier", 1.0),
+        ("light_near_start", "0.0"),
+        ("radiance", 1.0),
+        ("radiance_multiplier", 1.0),
+        ("exposure", 0)
+    ])
+    edf = update_parameters(edf, **kwargs)
+    return edf
+
 
 
 
