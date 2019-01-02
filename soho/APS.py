@@ -158,11 +158,16 @@ soho.lockObjects(now)
 # IFDmisc.initializeMotionBlur(cam, now)
 
 import haps
-import APSframe as APSobj
+import APSframe
 import APSmisc
+import APSobj
+import APSsettings
+
+reload(APSframe)
 reload(APSmisc)
 reload(haps)
 reload(APSobj)
+reload(APSsettings)
 
 FPS = soho.getDefaultedFloat('state:fps', [24])[0]
 FPSinv = 1.0 / FPS
@@ -171,6 +176,7 @@ EXTENSION = '.binarymesh' # .obj
 # How to choose among those?
 # GEOPATH = getSharedStoragePath()
 GEOPATH = APSmisc.getLocalStoragePath()
+DEFAULT_MATERIAL_NAME = 'default'
 
 
 
@@ -203,7 +209,7 @@ camera_parms = {'shutter_open_time' : 0.0 # FIXME (in mantra this lives on rop)
     }
 
 
-ipr_socket  = cam.getDefaultedInt('vm_image_mplay_socketport', now, [14757])[0]
+ipr_socket  = cam.getDefaultedInt('vm_image_mplay_socketport', now, [-1])[0]
 mblur_parms = APSmisc.initializeMotionBlur(cam, now)
 
 ##### CAMERA - Pinhole camera - for now ###################
@@ -215,7 +221,7 @@ if cam.evalFloat("space:world", now, xform):
         haps.Matrix(xform)))
 
 scene.add(camera)
-exportSOPMaterial(assembly, 'default_material')
+exportSOPMaterial(assembly, DEFAULT_MATERIAL_NAME)
 
 ##### Basic objects - /obj level - #############################
 for obj in soho.objectList('objlist:instance'):
@@ -234,10 +240,11 @@ for obj in soho.objectList('objlist:instance'):
                 'savegroups':True, 
                 'geo:savegroups':True}
 
-    material_name = None
+    material_name = DEFAULT_MATERIAL_NAME
     for group, part in parts.items():
-        material = exportSOPMaterial(assembly, group)
-        material_name = group
+        if group:
+            material = exportSOPMaterial(assembly, group)
+            material_name = group
     
     filename = get_obj_filename(obj, '')
     if not gdp.save(filename, options):
@@ -252,10 +259,10 @@ for obj in soho.objectList('objlist:instance'):
 
 ###### Basic lights ######################################
 for light in soho.objectList('objlist:light'):
-    xform = []
-    light.evalFloat('space:world', now, xform)
-    xform = hou.Matrix4(xform).transposed().asTuple()
-    aps.Assembly().insert('PointLight', light.getName(), xform=haps.Matrix(xform))
+   
+    apslight = APSframe.outputLight(light, now, mblur_parms)
+    aps.Assembly().emplace(apslight)
+    
 
 ############ - Frame - basics - ##################################
 resolution = (cam.getDefaultedInt('res', now, [0,0])[0], cam.getDefaultedInt('res', now, [0,0])[1])
