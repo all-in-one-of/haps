@@ -6,8 +6,6 @@ import sohog
 import hou
 from soho import SohoParm
 
-GEOPATH   = os.path.join(os.getcwd(), '')
-EXTENSION = '.binarymesh'# ".binarymesh" #
 
 # IFDhooks.call("pre_ifdGen")
 clockstart = time.time()
@@ -159,15 +157,21 @@ soho.lockObjects(now)
 
 # IFDmisc.initializeMotionBlur(cam, now)
 
-FPS = soho.getDefaultedFloat('state:fps', [24])[0]
-FPSinv = 1.0 / FPS
-
 import haps
 import APSframe as APSobj
 import APSmisc
 reload(APSmisc)
 reload(haps)
 reload(APSobj)
+
+FPS = soho.getDefaultedFloat('state:fps', [24])[0]
+FPSinv = 1.0 / FPS
+GEOPATH   = os.path.join(os.getcwd(), '')
+EXTENSION = '.binarymesh' # .obj
+# How to choose among those?
+# GEOPATH = getSharedStoragePath()
+GEOPATH = APSmisc.getLocalStoragePath()
+
 
 
 aps = APSobj.Appleseed()
@@ -199,8 +203,8 @@ camera_parms = {'shutter_open_time' : 0.0 # FIXME (in mantra this lives on rop)
     }
 
 
-ipr_socket = cam.getDefaultedInt('vm_image_mplay_socketport', now, [123])[0]
-mb_parm    = APSmisc.initializeMotionBlur(cam, now)
+ipr_socket  = cam.getDefaultedInt('vm_image_mplay_socketport', now, [14757])[0]
+mblur_parms = APSmisc.initializeMotionBlur(cam, now)
 
 ##### CAMERA - Pinhole camera - for now ###################
 camera = APSobj.PinholeCamera(cam.getName(), **camera_parms)
@@ -240,9 +244,11 @@ for obj in soho.objectList('objlist:instance'):
         sys.stderr.write("Can't save geometry from {} to {}".format(soppath, filename))
         continue
 
-    xform = []
-    obj.evalFloat("space:world", now, xform)
-    aps.Assembly().insert('MeshObject', obj.getName(), filename=filename, xform=haps.Matrix(xform), material=material_name)
+    # MB for objects
+    xforms = APSmisc.get_motionblur_xforms(obj, now, mblur_parms)
+    xforms = [haps.Matrix(xform) for xform in xforms]
+    aps.Assembly().insert('MeshObject', obj.getName(), filename=filename, 
+        xforms=xforms, material=material_name)
 
 ###### Basic lights ######################################
 for light in soho.objectList('objlist:light'):
