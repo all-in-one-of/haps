@@ -67,9 +67,7 @@ def outputLight(light, now, mblur_parms):
     if ltype == 'point':
         apslight = APSobj.PointLight(light.getName(), xforms=xforms, **light_parms)
         return apslight, apscolor
-    elif:
-        #TODO:
-        ltype == 'spot':
+    elif ltype == 'spot':
         return 
     # anthing else is mesh light
     filename, shops = outputTesselatedGeo(light, now, mblur_parms)
