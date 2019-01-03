@@ -8,12 +8,17 @@ import APSobj
 import math
 
 
-def outputTesselatedGeo(obj, now, mblur_parms):
+def outputTesselatedGeo(obj, now, mblur_parms, partition=False):
     soppath = obj.getDefaultedString('object:soppath', now, [''])[0]
     gdp     = sohog.SohoGeometry(soppath, now)
     if gdp.Handle < 0:
         sys.stderr.write("No geometry to reach in {}!".format(obj.getName()))
-        return
+        return None, None
+
+    shop_materialpaths = [None]
+    if partition:
+        parts = gdp.partition('geo:partattrib', 'shop_materialpath')
+        shop_materialpaths = parts.keys()
 
     gdp.tesselate({'geo:convstyle':'div', 'geo:triangulate':False, 'tess:polysides':3})
     
@@ -23,19 +28,19 @@ def outputTesselatedGeo(obj, now, mblur_parms):
                 'savegroups':True, 
                 'geo:savegroups':True}
 
-
     filename = APSmisc.get_obj_filename(obj, '')
     if not gdp.save(filename, options):
         sys.stderr.write("Can't save geometry from {} to {}".format(soppath, filename))
-        return 
+        return None, None
 
-    return filename
+    return filename, shop_materialpaths
+
 
 def outputLight(light, now, mblur_parms):
     # Find the wrangler for evaluating soho parameters
     wrangler = APSsettings.getWrangler(light, now, 'light_wrangler')
-    xforms = APSmisc.get_motionblur_xforms(light, now, mblur_parms)
-    xforms = [haps.Matrix(xform) for xform in xforms]
+    xforms   = APSmisc.get_motionblur_xforms(light, now, mblur_parms)
+    xforms   = [haps.Matrix(xform) for xform in xforms]
 
     wrangler  = APSsettings.getWrangler(light, now, 'light_wrangler')
     ltype     = light.wrangleString(wrangler, 'vm_areashape', now, [''])[0]
@@ -62,32 +67,20 @@ def outputLight(light, now, mblur_parms):
     if ltype == 'point':
         apslight = APSobj.PointLight(light.getName(), xforms=xforms, **light_parms)
         return apslight, apscolor
-    else:
-        filename = outputTesselatedGeo(light, now, mblur_parms)
-        if not filename:
-            sys.stderr.write("Can't save geometry from {} to {}".format(
-                light.getDefaultedString('object:soppath', now, [''])[0], filename))
-            return 
-
-        edf = APSobj.Edf(light.getName() + '_edf', 
-            model='diffuse_edf', 
-            radiance=colorname,
-            exposure=exposure,
-            radiance_multiplier=1)
-
-        mat = haps.Material(light.getName()+ '_material', 
-            model='generic_material').add(
-            haps.Parameter('edf', edf.get('name')))
-
-        xforms  = APSmisc.get_motionblur_xforms(light, now, mblur_parms)
-        xforms  = [haps.Matrix(xform) for xform in xforms]
-
-        absobjs = list(APSobj.MeshObject(light.getName(), filename=filename, 
-            xforms=xforms, material=mat.get('name'), slot='default'))
-        absobjs += [edf, apscolor, mat]
-        return absobjs
-
-
+    elif:
+        #TODO:
+        ltype == 'spot':
+        return 
+    # anthing else is mesh light
+    filename, shops = outputTesselatedGeo(light, now, mblur_parms)
+    if not filename:
+        sys.stderr.write("Can't save geometry from {} to {}".format(
+            light.getDefaultedString('object:soppath', now, [''])[0], filename))
+        return 
+    # TODO: some basics geometry shader support.
+    xforms  = APSmisc.get_motionblur_xforms(light, now, mblur_parms)
+    return APSobj.MeshLight(light.getName(), filename, color, exposure, 
+        xforms=xforms)
 
     return None
 

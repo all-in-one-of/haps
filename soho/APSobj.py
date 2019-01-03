@@ -314,17 +314,21 @@ def MeshObject(name, filename, **kwargs):
         obj_inst = TransformBlur(obj_inst, kwargs.get('xforms'))
 
     # materials:
-    if not kwargs.get('material'):
-        slot     = 'default'
-        material = 'default'
+    if not kwargs.get('materials'):
+        slots     = ('default',)
+        materials = ('default',)
     else:
-        slot     = kwargs.get('slot')
-        material = kwargs.get('material')
+        slots     = kwargs.get('slots')
+        materials = kwargs.get('materials')
 
-    obj_inst.add(haps.Assign_Material(None, 
-        slot=slot, side='front', material=material))
-    obj_inst.add(haps.Assign_Material(None, 
-        slot=slot, side='back', material=material))
+    assert(isinstance(slots,     collections.Iterable))
+    assert(isinstance(materials, collections.Iterable))
+
+    for slot, material in zip(slots, materials):
+        obj_inst.add(haps.Assign_Material(None, 
+            slot=slot, side='front', material=material))
+        obj_inst.add(haps.Assign_Material(None, 
+            slot=slot, side='back', material=material))
 
     return obj, obj_inst
 
@@ -482,9 +486,28 @@ def Edf(name, model, **kwargs):
     return edf
 
 
+def MeshLight(name, filename, color=(1,1,1), exposure=0, **kwargs):
+    """ Create gometry light. """
+    cname = name+'/color'
+    apscolor = Color(cname, values=color, alpha=1.0)
 
+    edf = Edf(name + '_edf', model='diffuse_edf', 
+        radiance=cname, exposure=exposure, radiance_multiplier=1)
 
+    mat = haps.Material(name+ '_material', model='generic_material').add(
+        haps.Parameter('edf', edf.get('name')))
 
+    if not kwargs.get('xforms'): 
+        xforms = [haps.Matrix()]
+    else:
+        xforms = [haps.Matrix(xform) for xform in kwargs.get('xforms')]
+
+    materials = (mat.get('name'),)
+    slots     = ('default',)
+    absobjs = list(MeshObject(name, filename=filename, 
+        xforms=xforms, materials=materials, slots=slots))
+    absobjs += [edf, apscolor, mat]
+    return absobjs
 
 
 

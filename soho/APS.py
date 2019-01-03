@@ -214,41 +214,24 @@ if cam.evalFloat("space:world", now, xform):
         haps.Matrix(xform)))
 
 scene.add(camera)
+materials_collection = [] # here we track of what we already exported
 exportSOPMaterial(assembly, APSmisc.DEFAULT_MATERIAL_NAME)
 
 ##### Basic objects - /obj level - #############################
 for obj in soho.objectList('objlist:instance'):
-    soppath = obj.getDefaultedString('object:soppath', now, [''])[0]
-    gdp     = sohog.SohoGeometry(soppath, now)
-    if gdp.Handle < 0:
-        sys.stderr.write("No geometry to reach in {}!".format(obj.getName()))
+    filename, shop_materials = APSframe.outputTesselatedGeo(obj, now, mblur_parms,
+        partition=True)
+    if None in (filename, shop_materials):
         continue
-
-    parts = gdp.partition('geo:partattrib', 'shop_materialpath')
-    gdp.tesselate({'geo:convstyle':'div', 'geo:triangulate':False, 'tess:polysides':3})
-    
-    options = { "geo:saveinfo":False, 
-                "json:textwidth":0, 
-                "geo:skipsaveindex":True, 
-                'savegroups':True, 
-                'geo:savegroups':True}
-
-    material_name = APSmisc.DEFAULT_MATERIAL_NAME
-    for group, part in parts.items():
-        if group:
-            material = exportSOPMaterial(assembly, group)
-            material_name = group
-    
-    filename = APSmisc.get_obj_filename(obj, '')
-    if not gdp.save(filename, options):
-        sys.stderr.write("Can't save geometry from {} to {}".format(soppath, filename))
-        continue
-
+    for shop in shop_materials:
+        if shop not in materials_collection:
+            aps.Assembly().insert('DefaultLambertMaterial', shop)
+            materials_collection += [shop]
     # MB for objects
     xforms = APSmisc.get_motionblur_xforms(obj, now, mblur_parms)
     xforms = [haps.Matrix(xform) for xform in xforms]
     aps.Assembly().insert('MeshObject', obj.getName(), filename=filename, 
-        xforms=xforms, material=material_name, slot=material_name)
+        xforms=xforms, materials=shop_materials, slots=shop_materials)
 
 ###### Basic lights ######################################
 for light in soho.objectList('objlist:light'):
