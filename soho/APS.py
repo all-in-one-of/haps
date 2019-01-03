@@ -223,7 +223,11 @@ for obj in soho.objectList('objlist:instance'):
         continue
     for shop in shop_materials:
         if shop not in materials_collection:
-            aps.Assembly().insert('DefaultLambertMaterial', shop)
+            mat = APSframe.outputMaterial(shop, now)
+            if mat:
+                aps.Assembly().emplace(mat)
+            else:
+                aps.Assembly().insert('DefaultLambertMaterial', shop)
             materials_collection += [shop]
     # MB for objects
     xforms = APSmisc.get_motionblur_xforms(obj, now, mblur_parms)
@@ -233,7 +237,6 @@ for obj in soho.objectList('objlist:instance'):
 
 ###### Basic lights ######################################
 for light in soho.objectList('objlist:light'):
-   
     apslight = APSframe.outputLight(light, now, mblur_parms)
     if apslight:
         aps.Assembly().emplace(apslight)
