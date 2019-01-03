@@ -1,6 +1,19 @@
 import soho
 
-theVersion = '0.1'
+#TODO: move it to version.py
+__version__       = '0.1'
+__appleseed_version__  = "2.0-beta"
+
+
+PREAMBULE="""<?xml version="1.0" encoding="UTF-8"?>
+<!-- File created by Houdini: {houdini_version}
+     APS module version     : {aps_version}
+     Generation Time        : {date}
+     Render Target          : {renderer_version} 
+     Output driver          : {driver}
+     HIP File: {hipfile}, $T={TIME}, $FPS={FPS}
+-->
+"""
 
 def getWrangler(obj, now, style):
     wrangler = obj.getDefaultedString(style, now, [''])[0]

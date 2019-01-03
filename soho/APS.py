@@ -5,6 +5,7 @@ import soho
 import sohog
 import hou
 from soho import SohoParm
+from datetime import datetime
 
 
 # IFDhooks.call("pre_ifdGen")
@@ -171,13 +172,10 @@ reload(APSsettings)
 
 FPS = soho.getDefaultedFloat('state:fps', [24])[0]
 FPSinv = 1.0 / FPS
-GEOPATH   = os.path.join(os.getcwd(), '')
-# How to choose among those?
-# GEOPATH = getSharedStoragePath()
 
 
 aps = APSobj.Appleseed()
-scene = aps.scene
+scene    = aps.scene
 assembly = aps.assembly
 
 
@@ -256,8 +254,26 @@ aps.Config().insert('InteractiveConfiguration', 'interactive')
 parm = {'diskfile': SohoParm('soho_diskfile', 'string', ['*'], False)}
 parmlist = soho.evaluate(parm)
 filename = parmlist['soho_diskfile'].Value[0]
+
+# We can't emmit file to stdout, because appleseed.cli curerently doesn't accept stdit 
 with open(filename, 'w') as file:
+    # technically preambule is not part of project object:
+    date      = datetime.strftime(datetime.today(), "%b %d, %Y at %H:%M:%S")
+    stat      = '<!-- Generation time: %g seconds -->' % (time.time() - clockstart)
+    preambule = APSsettings.PREAMBULE.format(
+        houdini_version=hou.applicationVersionString(),
+        aps_version=APSsettings.__version__,
+        date=date,
+        renderer_version=APSsettings.__appleseed_version__,
+        driver=soho.getOutputDriver().getName(),
+        hipfile=hou.hipFile.name(),
+        TIME=now,
+        FPS=FPS,
+        )
+
+    file.write(preambule)
     file.write(str(aps.project))
+    file.write(stat)
 
 
 
