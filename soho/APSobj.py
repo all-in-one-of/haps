@@ -439,11 +439,12 @@ def DisneyMaterial(name, layers=1, **kwargs):
     shader   = PhysicalSurfaceShader('surface_shader')
     material = haps.Material(name, model='disney_material')
     material.add_parms([
-                ("alpha_mask", "0"),
+                ("surface_shader", "surface_shader"),
+                ('edf', None),
+                ("alpha_map", "0"),
                 ("bump_amplitude", "1.0"),
                 ("displacement_method", "bump"),
                 ("normal_map_up", "z"),
-                ("surface_shader", "surface_shader")
         ])
     material = update_parameters(material, **kwargs)
     for layer in range(1, layers+1):
@@ -508,6 +509,17 @@ def MeshLight(name, filename, color=(1,1,1), exposure=0, **kwargs):
         xforms=xforms, materials=materials, slots=slots))
     absobjs += [edf, apscolor, mat]
     return absobjs
+
+def DiskTexture2D(name, filename, **kwargs):
+    texture = haps.Texture(name, model='disk_texture_2d').add_parms([
+        ("color_space", "srgb"),# FIXME make auto switcher
+        ("filename", filename)])
+    texture = update_parameters(texture, **kwargs)
+    texture_instance = haps.Texture_Instance(name+'_inst', texture=name).add_parms([
+        ("addressing_mode", "clamp"),
+        ("filtering_mode", "nearest"),])
+    texture_instance = update_parameters(texture_instance, **kwargs)
+    return texture, texture_instance
 
 
 
