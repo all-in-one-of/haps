@@ -83,4 +83,4 @@ def getWrangler(obj, now, style):
         #     soho.warning('Object %s has an unsupported wrangler (%s)'
         #                 % (obj.getName(), wname))
         return None
-    return wrangler(obj, now, theVersion)
+    return wrangler(obj, now, __version__)

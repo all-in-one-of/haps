@@ -21,8 +21,11 @@ def outputTesselatedGeo(obj, now, mblur_parms, partition=False):
         parts = gdp.partition('geo:partattrib', 'shop_materialpath')
         shop_materialpaths = parts.keys()
 
-    gdp.tesselate({'geo:convstyle':'div', 'geo:triangulate':False, 'tess:polysides':3})
-    
+    gdp = gdp.tesselate({'geo:convstyle':'div', 'geo:triangulate':False, 'tess:polysides':4})
+    if not gdp:
+        sys.stderr.write("Can't tesselate geometry from {} to {}".format(soppath, filename))
+        return None, None
+
     options = { "geo:saveinfo":False, 
                 "json:textwidth":0, 
                 "geo:skipsaveindex":True, 
