@@ -61,7 +61,6 @@ camera  = parmlist['camera'].Value[0]
 quickexit = parmlist['vm_quickexit'].Value[0]
 propdefs = parmlist['vm_defaults'].Value[0]
 
-
 if not soho.initialize(now, camera, options):
     soho.error("Unable to initialize rendering module with given camera")
 
@@ -90,14 +89,13 @@ objectSelection = {
 
     'sololight'     : SohoParm('sololight',     'string',       [''], False),
 
-    'vm_cameralist' : SohoParm('vm_cameralist', 'string',       [''], False),
+    'vm_cameralist' : SohoParm('vm_cameralist', 'string',       [''], False),   
 }
 
 for cam in soho.objectList('objlist:camera'):
     break
 else:
     soho.error("Unable to find viewing camera for render")
-
 
 
 objparms = cam.evaluate(objectSelection, now)
@@ -118,7 +116,6 @@ if sololight:
     stdlights = excludelights = ''
     forcelights = sololight
     forcelightsparm = 'sololight'
-
 
 # Obtain the list of cameras through which we need to render. The main camera
 # may specify a few sub-cameras, for example, in the stereo camera case.
@@ -200,9 +197,6 @@ camera_parms = {'shutter_open_time' : 0.0 # FIXME (in mantra this lives on rop)
     }
 
 
-ipr_socket  = cam.getDefaultedInt('vm_image_mplay_socketport', now, [-1])[0]
-mblur_parms = APSmisc.initializeMotionBlur(cam, now)
-
 ##### CAMERA - Pinhole camera - for now ###################
 camera = APSobj.PinholeCamera(cam.getName(), **camera_parms)
 xform  = []
@@ -215,6 +209,7 @@ scene.add(camera)
 materials_collection = [] # here we track of what we already exported
 exportSOPMaterial(assembly, APSmisc.DEFAULT_MATERIAL_NAME)
 
+mblur_parms = APSmisc.initializeMotionBlur(cam, now)
 ##### Basic objects - /obj level - #############################
 for obj in soho.objectList('objlist:instance'):
     filename, shop_materials = APSframe.outputTesselatedGeo(obj, now, mblur_parms,
@@ -258,7 +253,8 @@ parm = {'diskfile': SohoParm('soho_diskfile', 'string', ['*'], False)}
 parmlist = soho.evaluate(parm)
 filename = parmlist['soho_diskfile'].Value[0]
 
-# We can't emmit file to stdout, because appleseed.cli curerently doesn't accept stdit 
+
+# We can't emit file to stdout, because appleseed.cli currently doesn't accept stdit 
 with open(filename, 'w') as file:
     # technically preambule is not part of project object:
     date      = datetime.strftime(datetime.today(), "%b %d, %Y at %H:%M:%S")
