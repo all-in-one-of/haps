@@ -1,0 +1,158 @@
+//
+//  This file describes parameters for the viewport in Houdini.
+//
+//
+//
+// This document is under CC-3.0 Attribution-Share Alike 3.0
+//       http://creativecommons.org/licenses/by-sa/3.0/
+//  Attribution:  There is no requirement to attribute the author.
+{
+    name	viewport
+    label	"Viewport Display"
+    parmtag	{ spare_opfilter	"!!OBJ!!" }
+    parmtag	{ spare_classtags	"render" }
+
+    //
+    // Very Viewport specific parameters
+    //
+    // Viewport OpenGL control
+    collection {
+	name	viewport_opengl
+	label	"OpenGL"
+	parmtag	{ spare_category "OpenGL View" }
+
+	parm {
+	    name	vcomment
+	    label	"Viewport Comment"
+	    type	string
+	    default	{ "" }
+	}
+    }
+
+    collection {
+	name	viewport_light
+	label	"OpenGL Light"
+	parmtag	{ spare_category	"Light" }
+	parm	{
+	    name	ogl_enablelight
+	    label	"Enable Light In Viewport"
+	    type	toggle
+	    default	{ 1 }
+	}
+    }
+
+    collection {
+	name	viewport_guide
+	label	"OpenGL Guide"
+	parmtag	{ spare_category	"Guide" }
+	parm	{
+	    name	vport_promote_popguides
+	    label	"Promote POP Guide Geometry"
+	    type	toggle
+	    default	{ 1 }
+	}
+    }
+
+    collection {
+	name	viewport_fog
+	label	"OpenGL"
+	parmtag	{ spare_category "OpenGL Fog" }
+
+	parm {
+	    name	fog
+	    label	"Viewport Fog"
+	    type	ordinal
+	    default	{ "off" }
+	    menu {
+		"off"		"No Fog"
+		"linear"	"Linear"
+		"exp"		"Exponential"
+		"exp2"		"Squared Exponential"
+	    }
+	}
+	parm {
+	    name	fogdensity
+	    label	"Fog Density"
+	    type	float
+	    default	{ 3 }
+	    range	{ 0 10 }
+	    disablewhen	"{ fog == off }"
+	}
+	parm {
+	    name	fogcolor
+	    label	"Fog Color"
+	    type	color
+	    size	3
+	    default	{ .5 .5 .5 }
+	    disablewhen	"{ fog == off }"
+	}
+	parm {
+	    name	fogalpha
+	    label	"Fog Alpha"
+	    type	float
+	    default	{ .5 }
+	    disablewhen	"{ fog == off }"
+	}
+	parm {
+	    name	fognear
+	    label	"Fog Near"
+	    type	float
+	    default	{ 0 }
+	    disablewhen	"{ fog == off }"
+	}
+	parm {
+	    name	fogfar
+	    label	"Fog Far"
+	    type	float
+	    default	{ 10 }
+	    range	{ 0 100 }
+	    disablewhen	"{ fog == off }"
+	}
+    }
+
+    collection {
+	name	viewport_mask
+	label	"Mask"
+	parmtag	{ spare_category "View Mask" }
+
+	parm {
+	    name	maskaspect
+	    label	"Mask Aspect"
+	    type	float
+	    size	1
+	    default	{ 1.85 }
+	}
+	parm {
+	    name	maskopacity
+	    label	"Mask Opacity"
+	    type	float
+	    size	1
+	    default	{ 0.4 }
+	}
+	parm {
+	    name	maskoverlay
+	    label	"Mask Overlay SOP"
+	    type	oppath
+	    parmtag	{ opfilter "!!SOP!!" }
+	    size	1
+	    default	{ "" }
+	}
+    }
+
+    parm {
+	name	soho_viewport_menu
+	label	"Show In Viewport Menu"
+	parmtag	{ spare_category	"Menu" }
+	type	toggle
+	default	{ 0 }
+	help	"By default SOHO output drivers do not appear in the viewport menu.  Adding this property and turning it on will cause the driver to show up."
+    }
+    parm {
+	name	soho_renderview_menu
+	label	"Show In Render View Menu"
+	parmtag	{ spare_category	"Menu" }
+	type	toggle
+	default	{ 0 }
+	help	"Thought the Render View respects the soho_viewport_menu parameter, the soho_renderview_menu can be used to forcibly hide or include the output driver in its menu."
+    }
+}

@@ -1,0 +1,191 @@
+//
+//  This file describes the common control parameters for the SOHO
+//  interface.
+//
+//  This file can be included in your parameter description file (see
+//  mantra for an example).
+//
+//
+// This document is under CC-3.0 Attribution-Share Alike 3.0
+//       http://creativecommons.org/licenses/by-sa/3.0/
+//  Attribution:  There is no requirement to attribute the author.
+
+
+// If you're developing an output driver which has IPR support, look
+// for the fields marked by
+//    #define _SOHO_USER_IPR_MODE
+// These can be used to set up your custom output driver to be handled
+// in the IPR render view.
+
+// These parameter definitions aren't actually visible from Houdini.
+// However, they may be useful to developers of SOHO programs
+
+{
+    name	sohointrinsic
+    label	"SOHO Intrinsic Parameters"
+    parmtag	{ spare_opfilter	"!!ROP!!" }
+    parmtag	{ spare_classtags	"render" }
+
+    parm {
+	name	soho_program
+	label	"SOHO Program"
+	type	file
+	parmtag	{ spare_category	"SOHO Intrinsics" }
+	parmtag	{ filechooser_mode	"read" }
+	default	{ "" }
+	invisible
+	help	"The Python program to run for a SOHO output driver"
+    }
+    parm {
+	name	soho_shopstyle
+	label	"SOHO SHOP Style"
+	type	string
+	parmtag	{ spare_category	"SOHO Intrinsics" }
+	parmtag	{ filechooser_mode	"read" }
+	default	{ "VMantra" }
+	menureplace	{
+	    "VMantra"	"Mantra"
+	    "RIB"	"RIB"
+	    "MI"	"mentalray"
+	}
+	invisible
+	help	"This determines the SHOP Clerk used to evaluate shader strings"
+    }
+    parm {
+	name	soho_multiframe
+	label	"Multi-frame mode"
+	type	toggle
+	parmtag	{ spare_category	"SOHO Intrinsics" }
+	default	{ 0 }
+	invisible
+	help	"If this toggle is turned on, then the soho_program will only be called one time, rather than once per frame (which is the default)"
+    }
+    parm {
+	name	soho_outputmode
+	label	"SOHO Output Mode"
+	type	ordinal
+	parmtag	{ spare_category	"SOHO Intrinsics" }
+	default	{ "1" }
+	menu	{
+	    "0"	"Send output to soho_pipecommand"
+	    "1"	"Send output to soho_diskfile"
+	    "2"	"Output is controled by soho_program"
+#ifdef _SOHO_USER_IPR_MODE
+	    "3" "Run as pipe but leave pipe open for IPR mode"
+#endif
+	}
+	help	"Often implemented as a toggle rather than an ordinal."
+    }
+#ifdef _SOHO_USER_IPR_MODE
+    parm {
+	// Be very cautious adding this parameter.  IPR mode will only
+	// be enabled in the render view if this parameter exists and
+	// its value is set to 1 (i.e. turned on).
+	name	soho_ipr_support
+	label	"SOHO IPR Support"
+	type	toggle
+	parmtag	{ spare_category	"SOHO_Intrinsics" }
+	default	{ "0" }
+    }
+#endif
+
+    parm {
+	name	soho_diskfile
+	label	"Script Disk File"
+	type	file
+	parmtag	{ spare_category	"SOHO Intrinsics" }
+	parmtag	{ filechooser_mode	"write" }
+	default	{ "$HIP/test.txt" }
+	disablewhen	"{ soho_outputmode != 1 }"
+	help	"The disk file to send output to.  The file descriptor for the pipe can be retrieved from sohoglue.getFile(1), and is handled automatically in soho.initialize()"
+    }
+    parm {
+	name	soho_pipecmd
+	label	"Command"
+	type	string
+	parmtag	{ spare_category	"SOHO Intrinsics" }
+	default	{ "cat" }
+	disablewhen	"{ soho_outputmode != 0 }"
+	menureplace {
+	    "cat"	"Cat (Unix)"
+	    "type"	"Type (Windows)"
+	    "wc"	"Word count (wc)"
+	}
+	help	"This is the command to run.  The file descriptor for the pipe can be retrieved from sohoglue.getFile(1), and is handled automatically in soho.initialize()"
+    }
+    parm {
+	name	soho_compression
+	label	"File Compression"
+	type	string
+	parmtag	{ spare_category	"SOHO Intrinsics" }
+	default	{ "ext" }
+	disablewhen	"{ soho_outputmode != 1 soho_force_compression != 1 }"
+	menu {
+	    "ext"	"Use Filename Extension"
+	    "none"	"No Compression"
+	    "blosc"	"BLOSC Compression"
+	    "gzip"	"gzip Compression"
+	}
+	help	"Determines the file compression used when writing to a disk file (or if soho_force_compression is enabled)."
+    }
+    parm {
+	name	soho_force_compression
+	label	"Force Compression"
+	type	toggle
+	parmtag	{ spare_category	"SOHO Intrinsics" }
+	default	{ 0 }
+	disablewhen	"{ soho_outputmode == 1 }"
+	help	"Force compression, even when not writing to a disk file.  This may break rendering."
+    }
+    parm {
+	name	soho_foreground
+	label	"Block Until Render Completes"
+	type	toggle
+	parmtag	{ spare_category	"SOHO Intrinsics" }
+	default	{ 0 }
+	disablewhen	"{ soho_outputmode != 0 }"
+	help	"When rendering to the soho_pipecmd, turning this on will block Houdini until the pipe command completes."
+    }
+    parm {
+	name	soho_mkpath
+	label	"Create Intermediate Directories"
+	type	toggle
+	parmtag	{ spare_category	"SOHO Intrinsics" }
+	default	{ 1 }
+	help	"If enabled, this will cause intermediate directories of output files to be created."
+    }
+    parm {
+	name	soho_initsim
+	label	"Initialize Simulation OPs"
+	type	toggle
+	parmtag	{ spare_category	"SOHO Intrinsics" }
+	default	{ 0 }
+	help	"When starting a render from the middle of an animation, turning this toggle on will cause any simulation OPs to re-initialize."
+    }
+    parm {
+	name	soho_viewport_menu
+	label	"Show ROP in Viewport Menu"
+	type	toggle
+	parmtag	{ spare_category	"SOHO Intrinsics" }
+	default	{ 0 }
+	disablewhen	"{ soho_outputmode != 0 }"
+	help	"By default SOHO output drivers do not appear in the viewport menu.  Adding this propery and turning it on will cause the driver to show up in the menu."
+    }
+
+    parm {
+	name	soho_descriptivename
+	label	"Descriptive Name"
+	type	string
+	parmtag	{ spare_category	"SOHO Intrinsics" }
+	default	{ "" }
+	help	"This can be used to override the descriptive text in the network editor (usually set to the evaluate the soho_descriptiveparmname, vm_picture or ri_display parameters)"
+    }
+    parm {
+	name	soho_descriptiveparmname
+	label	"Descriptive Parm Name"
+	type	string
+	parmtag	{ spare_category	"SOHO Intrinsics" }
+	default	{ "" }
+	help	"This can be set to the value of the name of another string parameter.  The other parameter is evaluated to display the descriptive text in the network editor (usually set to show the output - like vm_picture or ri_display).  If this string is parameter is set, it will override the vm_picture and ri_display values."
+    }
+}

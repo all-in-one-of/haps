@@ -1,0 +1,1191 @@
+//
+//  This file describes parameters which were standard for all
+//  objects in Houdini8, but have been deprecated due to soho.
+//  However, for backward compatibility, and IFD library renderers,
+//  these parameters can be added as spare parameters.
+//
+
+//
+// This document is under CC-3.0 Attribution-Share Alike 3.0
+//       http://creativecommons.org/licenses/by-sa/3.0/
+//  Attribution:  There is no requirement to attribute the author.
+
+#define TOGGLE_PAIR(CTOKEN, CATEGORY, LABEL, TOGNAME, TOKEN, TYPE, DEF, RNG) \
+	    collection { \
+		name	CTOKEN \
+		label	LABEL \
+		parmtag	{ spare_category	CATEGORY } \
+		parm { \
+		    name	TOGNAME \
+		    label	LABEL \
+		    parmtag	{ spare_category	CATEGORY } \
+		    type	toggle \
+		    default	{ 0 } \
+		    joinnext \
+		} \
+		parm { \
+		    name	TOKEN \
+		    label	LABEL \
+		    type	TYPE \
+		    default	{ DEF } \
+		    range	{ RNG } \
+		    disablewhen { { TOGNAME == 0 } } \
+		} \
+	    }
+
+#define TOGGLE_MENU_PAIR(LABEL, TOGNAME, TOKEN, DEF, MENU) \
+	    parm { \
+		name	TOGNAME \
+		label	LABEL \
+		type	toggle \
+		default	{ 0 } \
+		joinnext \
+	    } \
+	    parm { \
+		name	TOKEN \
+		label	"" \
+		type	string \
+		default	{ DEF } \
+		disablewhen { { TOGNAME == 0 } } \
+		menu	{ MENU } \
+		nolabel	\
+	    }
+#define TOGGLE_TOGGLE_PAIR(LABEL, TOGNAME, TOKEN, DEF) \
+	    parm { \
+		name	TOGNAME \
+		label	LABEL \
+		type	toggle \
+		default	{ 0 } \
+		joinnext \
+	    } \
+	    parm { \
+		name	TOKEN \
+		label	LABEL \
+		type	int \
+		default	{ DEF } \
+		range	{ 0 1 } \
+		disablewhen { { TOGNAME == 0 } } \
+	    }
+
+#define DISABLE_DEEP	disablewhen "{ render_shadowmap == 0 } { depthdeep == 0 }"
+
+
+{
+    name	obsolete
+    label	"Houdini 8.0 (Obsolete)"
+    parmtag	{ spare_opfilter	"!!OBJ!!" }
+    parmtag	{ spare_classtags	"render deprecated" }
+
+    // --------------------------------------------------------
+    // Common parameters to All objects
+#include "CommonView.ds"
+
+    parm	{
+	name	blur
+	label	"Motion Blur"
+	parmtag	{ spare_category	"Render" }
+
+	type	string
+	default	{ "inherit" }
+	menu	{
+	    none	"None"
+	    inherit	"Inherit behaviour"
+	    xform	"Transformation Blur Only"
+	    deform	"Deformation Blur"
+	    velocity	"Velocity Attribute Blur"
+	}
+    }
+
+    TOGGLE_PAIR(h8matte,   "Render", "Matte",   tmatte,   matte, int, 0, 0 1)
+    TOGGLE_PAIR(h8phantom, "Render", "Phantom", tphantom, phantom, int, 0, 0 1)
+    TOGGLE_PAIR(h8rbounce, "Render", "Reflect Bounce", trbounce, rbounce,
+		int, 1, 0 10)
+    TOGGLE_PAIR(h8tbounce, "Render", "Transmit Bounce", ttbounce, tbounce,
+		int, 10, 0 10)
+    TOGGLE_PAIR(h8rclip, "Render", "Ray Clip", trclip, rclip,
+		float, 0.001, 0 1)
+    TOGGLE_PAIR(h8dbound, "Render", "Displace Bound", tdbound, dbound,
+		float, 0, 0 10)
+
+    collection {
+	name	h8shadingquality
+	label	"Shading Quality"
+	parmtag	{ spare_category	"Render" }
+
+	parm {
+	    name	tshadequality
+	    label	"Shading Quality"
+	    parmtag	{ spare_category	"Render" }
+	    type	toggle
+	    default	{ 0 }
+	    joinnext
+	}
+	parm {
+	    name	shadequality
+	    label	"Shading Quality"
+	    parmtag	{ spare_category	"Render" }
+	    type	float
+	    default	{ 1 }
+	    range	{ 0.01 5 }
+	    disablewhen	"{ tshadequality == 0 }"
+	}
+	parm {
+	    name	lod
+	    label	"Ray Shading Quality"
+	    parmtag	{ spare_category	"Render" }
+	    type	float
+	    default	{ 1 }
+	    range	{ 0.01 5 }
+	    disablewhen	"{ tshadequality == 0 }"
+	}
+    }
+    collection {
+	name	h8includefiles
+	label	"Render Include Files"
+	parmtag	{ spare_category	"Render" }
+
+	parm {
+	    name	preinclude
+	    label	"Pre-Include"
+	    parmtag	{ spare_category	"Render" }
+	    type	file
+	    default	{ "" }
+	}
+	parm {
+	    name	postinclude
+	    label	"Post-Include"
+	    parmtag	{ spare_category	"Render" }
+	    type	file
+	    default	{ "" }
+	}
+    }
+
+    // --------------------------------------------------------
+    // Camera specific parameters
+    // Include CommonView for many of the common camera parameters
+    // winroll was invisible in the UI and typically not fully
+    // supported, however, it is provided for backward compatibility
+    parm	{
+	name	winroll
+	label	"Window Roll"
+	parmtag	{ spare_category	"View" }
+	type	angle
+	default	{ 0 }
+	range	{ -360 360 }
+	// The winroll parameter is used inside the camera cook method
+	// (the transform on the camera is modified).
+	parmtag	{ cook_dependent	"1" }
+    }
+    parm	{
+	name	winp
+	label	"Window Roll Pivot"
+	parmtag	{ spare_category	"View" }
+	type	vector2
+	default	{ 0 0 }
+	range	{ 0 1 }
+	invisible
+	// Like winroll, the camera transform is dependent on this
+	// parameter
+	parmtag	{ cook_dependent	"1" }
+    }
+    parm	{
+	name	shutter
+	label	"Shutter Time"
+	parmtag	{ spare_category	"Render" }
+	type	float
+	default	{ 1 }
+    }
+
+    // --------------------------------------------------------
+    // Atmosphere object parameters
+    parm	{
+	name	shop_fogpath
+	label	"SHOP Shader"
+	parmtag	{ spare_category	"Shading" }
+	type	oppath
+	parmtag	{ opfilter	"!!SHOP/FOG!!" }
+	default	{ "" }
+    }
+    parm	{
+	// Also used by geometry and light objects
+	name	rishader
+	label	"RIB Shader"
+	parmtag	{ spare_category	"Shading" }
+	type	string
+	default	{ "" }
+    }
+
+    // --------------------------------------------------------
+    // Geometry object parameters
+    parm	{
+	name	smooth
+	label	"Smooth Shading"
+	parmtag	{ spare_category	"Render" }
+	type	toggle
+	default	{ 1 }
+    }
+    parm	{
+	name	nobackface
+	label	"Backface Removal"
+	parmtag	{ spare_category	"Render" }
+	type	toggle
+	default	{ 0 }
+    }
+    parm {
+	name	shop_surfacepath
+	label	"SHOP Surface"
+	parmtag	{ spare_category	"Shading" }
+	type	oppath
+	parmtag	{ opfilter	"!!SHOP/SURFACE!!" }
+	default	{ "" }
+    }
+    parm {
+	name	shop_photonpath
+	label	"SHOP Photon"
+	parmtag	{ spare_category	"Shading" }
+	type	oppath
+	parmtag	{ opfilter	"!!SHOP/PHOTON!!" }
+	default	{ "" }
+    }
+    parm {
+	name	shop_displacepath
+	label	"SHOP Displacement"
+	parmtag	{ spare_category	"Shading" }
+	type	oppath
+	parmtag	{ opfilter	"!!SHOP/DISPLACEMENT!!" }
+	default	{ "" }
+    }
+    parm {
+	name	lightmask
+	label	"Light Mask"
+	parmtag	{ spare_category	"Shading" }
+	type	oplist
+	default	{ "*" }
+	parmtag	{ opfilter "!!OBJ/LIGHT!!" }
+	parmtag	{ opexpand "1" }
+	parmtag	{ oprelative "/obj" }
+    }
+    parm {
+	name	reflectmask
+	label	"Reflection Mask"
+	parmtag	{ spare_category	"Shading" }
+	type	oplist
+	default	{ "*" }
+	parmtag	{ opfilter "!!OBJ/GEOMETRY!!" }
+	parmtag	{ opexpand "1" }
+	parmtag	{ oprelative "/obj" }
+    }
+
+    collection	{
+	name	geometry_detail
+	label	"Geometry Rendering"
+	parmtag	{ spare_category	"Render" }
+	parm	{
+	    name	detail
+	    label	"Geometry As"
+	    type	string
+	    default	{ "off" }
+	    menu	{
+		"off"		"Geometry as is"
+		"subdiv"	"Polygons as Subdivision Surfaces"
+		"points"	"Render only points"
+		"file"		"Render from file"
+		"boundfile"	"Bounded file (explicit bounds)"
+		"boundsop"	"Bounded file (render SOP define bounds)"
+		"subfile"	"Subdivision from file"
+		"subboundfile"	"Subdivision from file (explicit bounds)"
+		"subboundsop"	"Subdivision from file (render SOP bounds)"
+		"ptfile"	"Points from file"
+		"ptboundfile"	"Points from file (explicit bounds)"
+		"ptboundsop"	"Points from file (render SOP bounds)"
+		"proc"		"Procedural"
+		"procbound"	"Procedural (explicit bounds)"
+		"procboundsop"	"Procedural (render SOP bounds)"
+	    }
+	}
+
+#define ENABLE_GEO_FILE	\
+	    disablewhen	"{ detail != file detail != boundfile detail != boundsop detail != subfile detail != subboundfile detail != subboundsop detail != ptfile detail != ptboundfile detail != ptboundsop }"
+
+#define ENABLE_GEO_PROC \
+	    disablewhen "{ detail != proc detail != procbound detail != procboundsop }"
+#define ENABLE_GEO_BOX \
+	    disablewhen "{ detail != boundfile detail != subdboundfile detail != ptboundfile detail != procbound }"
+
+	parm {
+	    name	detail_file
+	    label	"Geometry File"
+	    type	geometry
+	    default	{ "" }
+	    ENABLE_GEO_FILE
+	}
+	parm {
+	    name	detail_autoarchive
+	    label	"Auto Archive"
+	    type	string
+	    default	{ "off" }
+	    menu	{
+		off	"No auto-archiving"
+		on	"Auto-archive"
+		exist	"Auto-archive (no overwrite)"
+	    }
+	    ENABLE_GEO_FILE
+	}
+	parm {
+	    name	detail_mantraproc
+	    label	"Mantra Procedural"
+	    type	string
+	    default	{ "" }
+	    ENABLE_GEO_PROC
+	}
+	parm {
+	    name	detail_ribproc
+	    label	"RIB Procedural"
+	    type	string
+	    default	{ "" }
+	    ENABLE_GEO_PROC
+	}
+	parm {
+	    name	detail_blur
+	    label	"Do shutter blur of files in renderer"
+	    type	toggle
+	    default	{ 0 }
+	    ENABLE_GEO_FILE
+	}
+	parm {
+	    name	detail_min
+	    label	"File Min Bounds"
+	    type	vector
+	    size	3
+	    default	{ -1 -1 -1 }
+	    ENABLE_GEO_BOX
+	}
+	parm {
+	    name	detail_max
+	    label	"File Max Bounds"
+	    type	vector
+	    size	3
+	    default	{ 1 1 1 }
+	    ENABLE_GEO_BOX
+	}
+	parm {
+	    name	shop_geometrypath
+	    label	"SHOP Geo Shader"
+	    type	oppath
+	    parmtag	{ opfilter	"!!SHOP/GEOMETRY!!" }
+	    default	{ "" }
+	    ENABLE_GEO_PROC
+	}
+    }
+    parm {
+	name	instancegroup
+	label	"Geo Instance Group"
+	parmtag	{ spare_category	"Render" }
+	type	string
+	default	{ "" }
+    }
+    parm {
+	name	causticmode
+	label	"mi Caustics Mode"
+	parmtag	{ spare_category	"Render" }
+	type	ordinal
+	default	{ 3 }
+	menu	{
+	    0	"Don't cast or receive photons"
+	    1	"Only cast photons"
+	    2	"Only receive photons"
+	    3	"Both cast and receive photons"
+	}
+    }
+    parm {
+	name	gillummode
+	label	"mi GI Mode"
+	parmtag	{ spare_category	"Render" }
+	type	ordinal
+	default	{ 3 }
+	menu	{
+	    0	"Don't cast or receive photons"
+	    1	"Only cast photons"
+	    2	"Only receive photons"
+	    3	"Both cast and receive photons"
+	}
+    }
+
+    parm {
+	name	shadespace
+	label	"Shader Space"
+	parmtag	{ spare_category	"Shading" }
+	type	oppath
+	parmtag	{ opfilter	"!!SHOP/OBJ!!" }
+	default	{ "" }
+    }
+    parm {
+	name	dispspace
+	label	"Displace Space"
+	parmtag	{ spare_category	"Shading" }
+	type	oppath
+	parmtag	{ opfilter	"!!SHOP/OBJ!!" }
+	default	{ "" }
+    }
+
+    // Renderman specific
+    collection {
+	name	ri_specific
+	label	"RenderMan Specific"
+	parmtag	{ spare_category	"Shading" }
+	parm {
+	    name	ri_color
+	    label	"RIB Colors"
+	    type	toggle
+	    default	{ 0 }
+	}
+	parm {
+	    name	ri_Cs
+	    label	"RIB Cs"
+	    type	color
+	    size	3
+	    default	{ 1 1 1 }
+	    disablewhen	"{ ri_color == 0 }"
+	}
+	parm {
+	    name	ri_Os
+	    label	"RIB Os"
+	    type	color
+	    size	3
+	    default	{ 1 1 1 }
+	    disablewhen	"{ ri_color == 0 }"
+	}
+	parm {
+	    name	ri_Photon
+	    label	"RIB Photon Material"
+	    type	string
+	    default	{ "matte" }
+	    menu	{
+		"matte"		"Matte"
+		"translucent"	"Translucent"
+		"chrome"	"Chrome"
+		"glass"		"Glass"
+		"water"		"Water"
+		"transparent"	"Transparent"
+	    }	
+	}
+	TOGGLE_MENU_PAIR("Diffuse Ray Visibility",
+		tri_vis_raydiff, ri_vis_raydiff,
+		"invisible",
+		"invisible" "Invisible" \
+		"primitive" "Visible - Use Cs/Os" \
+		"shader" "Visible - Use Shader")
+	TOGGLE_MENU_PAIR("Specular Visibility",
+		tri_vis_rayspec, ri_vis_rayspec,
+		"invisible",
+		"invisible" "Invisible" \
+		"primitive" "Visible - Use Cs/Os" \
+		"shader" "Visible - Use Shader")
+	TOGGLE_MENU_PAIR("Transmission Visibility",
+		tri_vis_raytrans, ri_vis_raytrans,
+		"invisible",
+		"invisible" "Invisible" \
+		"primitive" "Visible - Use Cs/Os" \
+		"shader" "Visible - Use Shader")
+	TOGGLE_TOGGLE_PAIR("Photon Visibility",
+		tri_vis_photon, ri_vis_photon, 0)
+	TOGGLE_TOGGLE_PAIR("Midpoint Filter Visibility",
+		tri_vis_midpoint, ri_vis_midpoint, 0)
+	TOGGLE_MENU_PAIR("Camera Hit Mode",
+		tri_camhitmode, ri_camhitmode,
+		"shader",
+		"primitive"	"Primitive" \
+		"shader"	"Shader")
+	parm {
+	    name	ridisplace
+	    label	"RiDisplace"
+	    type	string
+	    default	{ "" }
+	}
+	parm {
+	    name	riinterior
+	    label	"RiInterior"
+	    type	string
+	    default	{ "" }
+	}
+    }
+    collection {
+	name	mi_specific
+	label	"mentalray Specific"
+	parmtag	{ spare_category	"Shading" }
+
+	parm {
+	    name	shop_surfaceshadowpath
+	    label	"SHOP Shadow"
+	    type	oppath
+	    parmtag	{ opfilter	"!!SHOP/SURFACESHADOW!!" }
+	    default	{ "" }
+	}
+	parm {
+	    name	shop_fogpath
+	    label	"SHOP Volume"
+	    type	oppath
+	    parmtag	{ opfilter	"!!SHOP/ATMOSPHERE!!" }
+	    default	{ "" }
+	}
+	parm {
+	    name	shop_backgroundpath
+	    label	"SHOP Background"
+	    type	oppath
+	    parmtag	{ opfilter	"!!SHOP/BACKGROUND!!" }
+	    default	{ "" }
+	}
+	parm {
+	    name	shop_photonvolumepath
+	    label	"SHOP Photon Volume"
+	    type	oppath
+	    parmtag	{ opfilter	"!!SHOP/PHOTONVOLUME!!" }
+	    default	{ "" }
+	}
+	parm {
+	    name	shop_contourpath
+	    label	"SHOP Contour"
+	    type	oppath
+	    parmtag	{ opfilter	"!!SHOP/CONTOUR!!" }
+	    default	{ "" }
+	}
+    }
+    collection {
+	name	reflect_map
+	label	"Reflection Map Specific"
+	parmtag	{ spare_category	"Shading" }
+
+	parm {
+	    name	render_envmap
+	    label	"Auto-Gen Reflection Map"
+	    type	toggle
+	    default	{ 0 }
+	}
+	parm {
+	    name	reflmap
+	    label	"Map Name"
+	    type	file
+	    default	{ "$HOUDINI_TEMP_DIR/$OS.rat" }
+	    disablewhen	"{ render_envmap == 0 }"
+	}
+	parm {
+	    name	reflres
+	    label	"Map Res"
+	    type	int
+	    default	{ 128 }
+	    range	{ 10 256 }
+	    disablewhen	"{ render_envmap == 0 }"
+	}
+    }
+
+    // --------------------------------------------------------
+    // Light specific parameters
+    // Ambient parameters
+    parm {
+	name	light_color
+	label	"Light Color"
+	parmtag	{ spare_category	"Light" }
+	type	color
+	size	3
+	default	{ .5 .5 .5 }
+    }
+    collection	{
+	name	lightstyle
+	label	"Light Style"
+	parmtag	{ spare_category	"Light" }
+	parm {
+	    name	light_type
+	    label	"Light Type"
+	    type	string
+	    default	{ "off" }
+	    menu	{
+		"off"	"Point Light"
+		"on"	"Cone Light"
+	    }
+	}
+	parm {
+	    name	coneangle
+	    label	"Cone Angle"
+	    type	angle
+	    default	{ 45 }
+	    range	{ 0 180 }
+	    disablewhen	"{ light_type != on }"
+	}
+	parm {
+	    name	conedelta
+	    label	"Cone Delta"
+	    type	angle
+	    default	{ 10 }
+	    range	{ 0 180 }
+	    disablewhen	"{ light_type != on }"
+	}
+	parm {
+	    name	coneroll
+	    label	"Cone Rolloff"
+	    type	float
+	    default	{ 1 }
+	    range	{ 0.001 10 }
+	    disablewhen	"{ light_type != on }"
+	}
+    }
+    collection {
+	name	attenuation
+	label	"Attenuation"
+	parmtag	{ spare_category	"Light" }
+	parm {
+	    name	atten_type
+	    label	"Attenuation"
+	    type	string
+	    default	{ "half" }
+	    menu	{
+		"off"	"No Attenuation"
+		"half"	"Half Distance Attenuation"
+		"physical"	"Physically Correct"
+	    }
+	}
+	parm {
+	    name	atten_dist
+	    label	"Atten Distance"
+	    type	float
+	    default	{ 1e6 }
+	    logarithmic
+	    range	{ 0.001 1e6 }
+	    disablewhen	"{ atten_type != \"half\" }"
+	}
+    }
+    parm	{
+	name	shop_lightpath
+	label	"SHOP Shader"
+	parmtag	{ spare_category	"Light" }
+	type	oppath
+	parmtag	{ opfilter		"!!SHOP/LIGHT!!" }
+	default	{ "" }
+    }
+    parm	{
+	name	shop_shadowpath
+	label	"SHOP Shadow Shader"
+	parmtag	{ spare_category	"Shadow" }
+	type	oppath
+	parmtag	{ opfilter		"!!SHOP/SHADOW!!" }
+	default	{ "" }
+    }
+    parm	{
+	name	shop_emitterpath
+	label	"SHOP Emitter"
+	parmtag	{ spare_category	"Light" }
+	type	oppath
+	parmtag	{ opfilter		"!!SHOP/EMITTER!!" }
+	default	{ "" }
+    }
+    parm	{
+	name	shader
+	label	"Mantra8.0 Shadow"
+	parmtag	{ spare_category	"Shadow" }
+	type	string
+	default	{ "" }
+	menureplace	{
+	    "fastShadow"	"Fast (Opaque) Shadows"
+	    "filterShadow"	"Transparent  Shadows"
+	    "zShadow"		"Z-Depth Map Shadows"
+	}
+    }
+
+    // From the big light
+    parm {
+	name	shadowmask
+	label	"Shadow Mask"
+	parmtag	{ spare_category	"Shadow" }
+	type	oplist
+	default	{ "*" }
+	parmtag	{ opfilter "!!OBJ/GEOMETRY!!" }
+	parmtag	{ opexpand "1" }
+	parmtag	{ oprelative "/obj" }
+    }
+    collection {
+	name	shadow_map
+	label	"Z-Depth Map"
+	parmtag	{ spare_category	"Shadow" }
+
+	parm {
+	    name	render_shadowmap
+	    label	"Auto-Generate Depth Map"
+	    type	toggle
+	    default	{ 0 }
+	}
+	parm {
+	    name	depthmap
+	    label	"Depth Map"
+	    type	file
+	    default	{ "" }
+	}
+	parm {
+	    name	depthsamples
+	    label	"Depth Samples"
+	    type	int
+	    size	2
+	    default	{ 1 1 }
+	    range	{ 1 8 }
+	    disablewhen	"{ render_shadowmap == 0 }"
+	}
+	parm {
+	    name	depthblur
+	    label	"Enable Motion Blur"
+	    type	toggle
+	    default	{ 0 }
+	    disablewhen	"{ render_shadowmap == 0 }"
+	}
+	parm {
+	    name	depthdeep
+	    label	"Deep Shadow Map"
+	    type	toggle
+	    default	{ 0 }
+	    disablewhen	"{ render_shadowmap == 0 }"
+	}
+	parm {
+	    name	depthquantize
+	    label	"Depth Quantization"
+	    type	string
+	    default	{ "midpoint" }
+	    menu	{
+		"near"		"Closest Z Value"
+		"midpoint"	"Mid-Point Z Value"
+		"far"		"Farthest Z Value"
+		"average"	"Average Z Value"
+	    }
+	    DISABLE_DEEP
+	}
+	parm {
+	    name	depthminmax
+	    label	"RIB MinMax Shadows"
+	    type	toggle
+	    default	{ 0 }
+	    disablewhen	"{ render_shadowmap == 0 }"
+	}
+	parm {
+	    name	rishadowtype
+	    label	"Deep Shadow Style"
+	    type	string
+	    default	{ "discrete" }
+	    menu	{
+		"discrete"	"Discrete Opacity Values"
+		"continuous"	"Continuous/Interpolated Opacity"
+	    }
+	    DISABLE_DEEP
+	}
+	parm {
+	    name	depthofsize
+	    label	"Of Size"
+	    type	string
+	    default	{ "3" }
+	    menu	{
+		"1"	"Grayscale Shadows"
+		"3"	"RGB Shadow"
+	    }
+	    DISABLE_DEEP
+	}
+	parm {
+	    name	depthof
+	    label	"Of Quantization"
+	    type	string
+	    default	{ "real16" }
+	    menu	{
+		"real16"	"16-Bit Floating Point"
+		"real32"	"32-Bit Floating Point"
+		"real64"	"64-Bit Floating Point"
+	    }
+	    DISABLE_DEEP
+	}
+	parm {
+	    name	depthpz
+	    label	"Pz Quantization"
+	    type	string
+	    default	{ "real32" }
+	    menu	{
+		"real16"	"16-Bit Floating Point"
+		"real32"	"32-Bit Floating Point"
+		"real64"	"64-Bit Floating Point"
+	    }
+	    DISABLE_DEEP
+	}
+	parm {
+	    name	depthcompression
+	    label	"Compression"
+	    type	int
+	    default	{ 5 }
+	    range	{ 0 10 }
+	    DISABLE_DEEP
+	}
+	parm {
+	    name	depthzbias
+	    label	"Z-Bias"
+	    type	float
+	    default	{ 0.001 }
+	    range	{ 0 1 }
+	    DISABLE_DEEP
+	}
+	parm {
+	    # When we throw in all the shadow map parameters from
+	    # obsolete lights, we also throw in the light wrangler
+	    name	light_wrangler
+	    label	"Light Wrangler"
+	    type	string
+	    default	{ "H8Light" }
+	    invisible
+	}
+    }
+    parm {
+	name	specmap
+	label	"Reflection Map"
+	parmtag	{ spare_category	"Light" }
+	type	file
+	default	{ "" }
+    }
+    parm {
+	name	diffmap
+	label	"Diffuse Map"
+	parmtag	{ spare_category	"Light" }
+	type	file
+	default	{ "" }
+    }
+    parm {
+	name	projmap
+	label	"Projection Map"
+	parmtag	{ spare_category	"Light" }
+	type	file
+	default	{ "" }
+    }
+    parm {
+	name	clampprojmap
+	label	"Clamp Projected Map To Frustum"
+	parmtag	{ spare_category	"Light" }
+	type	toggle
+	default	{ 0 }
+	disablewhen	"{ projmap == \"\" }"
+    }
+    parm {
+	name	useactiveradius
+	label	"Clamp Illumination To Far Clipping Radius"
+	parmtag	{ spare_category	"Light" }
+	type	toggle
+	default	{ 0 }
+    }
+    parm {
+	name	spread
+	label	"Shadow Spread"
+	parmtag	{ spare_category	"Shadow" }
+	type	float
+	default	{ 2 }
+	range	{ 0 10 }
+    }
+    parm {
+	name	reflect
+	label	"Refl. Map Scale"
+	parmtag	{ spare_category	"Light" }
+	type	vector2
+	size	2
+	default	{ 1 1 }
+	range	{ 0.001 5 }
+    }
+    parm {
+	name	diffuse
+	label	"Diffuse Contribution"
+	parmtag	{ spare_category	"Light" }
+	type	toggle
+	default	{ 1 }
+    }
+    parm {
+	name	specular
+	label	"Specular Contribution"
+	parmtag	{ spare_category	"Light" }
+	type	toggle
+	default	{ 1 }
+    }
+    parm {
+	name	photondirect
+	label	"Photons Contribute To Direct Illumination"
+	parmtag	{ spare_category	"Light" }
+	type	toggle
+	default	{ 0 }
+    }
+    parm {
+	name	energy
+	label	"mi Energy"
+	parmtag	{ spare_category	"Light" }
+	type	color
+	size	3
+	default	{ 0 0 0 }
+    }
+    parm {
+	name	exponent
+	label	"mi Exponent"
+	parmtag	{ spare_category	"Light" }
+	type	float
+	default	{ 2 }
+    }
+    parm {
+	name	causticphotons
+	label	"mi Caustic Photon Emit/Store"
+	parmtag	{ spare_category	"Light" }
+	type	int
+	size	2
+	default	{ 0 0 }
+    }
+    parm {
+	name	globillphotons
+	label	"mi Global Illum. Photons"
+	parmtag	{ spare_category	"Light" }
+	type	int
+	size	2
+	default	{ 0 0 }
+    }
+    collection	{
+	name	area_light
+	label	"Area Light"
+	parmtag	{ spare_category	"Light" }
+	parm {
+	    name	areashape
+	    label	"Area Shape"
+	    type	string
+	    menu	{
+		"point"	"Point Light"
+		"line"	"Line Light"
+		"grid"	"Grid Light"
+		"disk"	"Disk Light"
+		"sphere"	"Spherical Light"
+		"type"	"Tube Light"
+	    }
+	}
+	parm {
+	    name	areasize
+	    label	"Area Size"
+	    type	float
+	    default	{ 1 }
+	    range	{ .1 5 }
+	    disablewhen	"{ areashape == \"point\" }"
+	}
+	parm {
+	    name	areasamples
+	    label	"Area Samples"
+	    type	float
+	    default	{ 16 }
+	    range	{ 1 64 }
+	    disablewhen	"{ areashape == \"point\" }"
+	}
+    }
+    parm {
+	name	partinstancepath
+	label	"Point Instance Path"
+	help	"This parameter is deprecated.  The instancepath parameter should be used instead"
+	type	oppath
+	parmtag	{ opfilter "!!OBJ!!" }
+	default	{ "" }
+	parmtag	{ spare_category	"Instance" }
+    }
+
+    // Lifted from viewport.ds
+    //
+    // Very Viewport specific parameters
+    //
+    // Viewport OpenGL control
+    collection {
+	name	viewport_opengl
+	label	"OpenGL"
+	parmtag	{ spare_category "OpenGL View" }
+
+	parm {
+	    name	clear
+	    label	"Clear Viewport"
+	    type	float
+	    default	{ 1 }
+	    range	{ 0 1 }
+	}
+
+	parm {
+	    name	vcomment
+	    label	"Viewport Comment"
+	    type	string
+	    default	{ "" }
+	}
+    }
+
+    collection {
+	name	viewport_fog
+	label	"OpenGL"
+	parmtag	{ spare_category "OpenGL Fog" }
+
+	parm {
+	    name	fog
+	    label	"Viewport Fog"
+	    type	ordinal
+	    default	{ "off" }
+	    menu {
+		"off"		"No Fog"
+		"linear"	"Linear"
+		"exp"		"Exponential"
+		"exp2"		"Squared Exponential"
+	    }
+	}
+	parm {
+	    name	fogdensity
+	    label	"Fog Density"
+	    type	float
+	    default	{ 3 }
+	    range	{ 0 10 }
+	    disablewhen	"{ fog == off }"
+	}
+	parm {
+	    name	fogcolor
+	    label	"Fog Color"
+	    type	color
+	    size	3
+	    default	{ .5 .5 .5 }
+	    disablewhen	"{ fog == off }"
+	}
+	parm {
+	    name	fogalpha
+	    label	"Fog Alpha"
+	    type	float
+	    default	{ .5 }
+	    disablewhen	"{ fog == off }"
+	}
+	parm {
+	    name	fognear
+	    label	"Fog Near"
+	    type	float
+	    default	{ 0 }
+	    disablewhen	"{ fog == off }"
+	}
+	parm {
+	    name	fogfar
+	    label	"Fog Far"
+	    type	float
+	    default	{ 10 }
+	    range	{ 0 100 }
+	    disablewhen	"{ fog == off }"
+	}
+    }
+
+    collection {
+	name	viewport_mask
+	label	"Mask"
+	parmtag	{ spare_category "View Mask" }
+
+	parm {
+	    name	maskaspect
+	    label	"Mask Aspect"
+	    type	float
+	    size	1
+	    default	{ 1.85 }
+	}
+	parm {
+	    name	maskopacity
+	    label	"Mask Opacity"
+	    type	float
+	    size	1
+	    default	{ 0.4 }
+	}
+	parm {
+	    name	maskoverlay
+	    label	"Mask Overlay SOP"
+	    type	oppath
+	    parmtag	{ opfilter "!!SOP!!" }
+	    size	1
+	    default	{ "" }
+	}
+    }
+
+    //
+    // Rotoscoping
+    collection {
+	name	viewport_roto
+	label	"Roto"
+	parmtag	{ spare_category "View Roto" }
+
+	groupradio {
+	    name	usecop
+	    label	"Use Disk File"
+
+	    parm {
+		name	rotofile
+		label	"Roto File"
+		type	image
+		default	{ "" }
+	    }
+	    parm {
+		name	overridesize
+		label	"Override Size"
+		type	toggle
+		default	{ 0 }
+	    }
+	    parm {
+		name	filesize
+		label	"Roto File Size"
+		// For backwards compatibility, we don't want to use
+		// the intvector2 type here.
+		type	int
+		size	2
+		default	{ 512 512 }
+		disablewhen	"{ overridesize == 0 }"
+	    }
+	}
+	groupradio {
+	    name	usecop
+	    label	"Use COP Image"
+
+	    parm {
+		name	coppath
+		label	"COP Path"
+		type	oppath
+		parmtag	{ opfilter "!!COP2!!" }
+		default	{ "" }
+	    }
+	    parm {
+		name	copframe
+		label	"COP Frame"
+		type	float
+		default	{ "$F" }
+	    }
+	    parm {
+		name	copcolor
+		label	"COP Color Plane"
+		type	string
+		default	{ "C" }
+		joinnext
+		menureplace {
+		    "C"		"Default Color"
+		    "A"		"Alpha"
+		    "Pz"	"Pz (z-position) Plane"
+		    "P"		"P (position) Plane"
+		    "N"		"N (normal) Plane"
+		    "M"		"M (mask) Plane"
+		    "V"		"V (velocity) Plane"
+		    "B"		"V (bump) Plane"
+		}
+	    }
+	    parm {
+		name	copalpha
+		label	"COP Alpha Plane"
+		type	ordinal
+		default	{ "noalpha" }
+		menu {
+		    "usealpha"	"Use Alpha"
+		    "noalpha"	"No Alpha"
+		}
+	    }
+	}
+	parm {
+	    name	trackwin
+	    label	"Apply Zoom To Background"
+	    type	toggle
+	    default	{ 1 }
+	}
+    }
+}
+
+#undef DISABLE_DEEP
+#undef TOGGLE_PAIR
+#undef TOGGLE_MENU_PAIR
+#undef TOGGLE_TOGGLE_PAIR
+#undef ENABLE_GEO_FILE
+#undef ENABLE_GEO_PROC
+#undef ENABLE_GEO_BOX

@@ -2,6 +2,8 @@
 import soho
 import hou
 from soho import SohoParm
+from sohog import SohoGeometry
+import posixpath
 
 import os
 
@@ -42,6 +44,72 @@ def ouputMotionBlurInfo(obj, now, CameraBlur, required=False):
             pass
             # ray_property('object', 'geosamples', [nseg])
 
+
+
+def absoluteObjectPath(obj_rel_to, now, path):
+    if posixpath.isabs(path):
+        return path
+    rel_to = obj_rel_to.getDefaultedString("object:name", now, [''])[0]
+    return posixpath.normpath(posixpath.join(rel_to, path))
+
+def getInstancerAttributes(obj, now):
+    attribs = [
+        'geo:pointxform',               # Required
+        'v',
+        'instance',
+        'instancefile',
+        'shop_materialpath',
+        'material_override'
+    ]
+
+    sop_path = []
+    if not obj.evalString('object:soppath', now, sop_path):
+        return          # No geometry associated with this object
+
+    geo = SohoGeometry(sop_path[0], now)
+    if geo.Handle < 0:  # No geometry data available
+        return
+
+    npts = geo.globalValue('geo:pointcount')[0]
+    if not npts:
+        return
+
+    attrib_map = {}
+
+    for attrib in attribs:
+        handle = geo.attribute('geo:point', attrib)
+        if handle >= 0:
+            attrib_map[attrib] = handle
+
+    return (geo, npts, attrib_map)
+
+def getInstantiatedObjects(obj, now):
+    (geo, npts, attrib_map) = getInstancerAttributes(obj, now)
+    if not geo or not npts:
+        return []
+
+    inst_path = []
+    obj.evalString('instancepath', now, inst_path)
+
+    inst_path[0] = absoluteObjectPath(obj, now, inst_path[0])
+    
+    # See if there's a per-point instance assignment
+    if 'instance' not in attrib_map:
+        return inst_path
+
+    unique_inst = set(inst_path)
+    for pt in xrange(npts):
+        inst_path = geo.value(attrib_map['instance'], pt)[0]
+        unique_inst.add(absoluteObjectPath(obj, now, inst_path))
+
+    return list(unique_inst)
+
+
+def isObjectFastPointInstancer(obj, now):
+    if not obj:
+        return False
+    plist = obj.evaluate( [ SohoParm('ptinstance', 'int', [0], False ) ], now )
+    return plist[0].Value[0] == 2
 
 
 def get_motionblur_xforms(obj, now, mblur_parms):

@@ -1,0 +1,133 @@
+//
+//  This file describes esoteric parameters which are checked on
+//  vopnets.  If the parameters don't exist, then the defaults are
+//  used.
+//  Only one compiler can be specified (though the user is free to
+//  change it entirely).
+//
+// This document is under CC-3.0 Attribution-Share Alike 3.0
+//       http://creativecommons.org/licenses/by-sa/3.0/
+//  Attribution:  There is no requirement to attribute the author.
+
+#define RENDERSCRIPT(TOKEN, LABEL)	\
+    collection { \
+	name	c_##TOKEN \
+	label	LABEL \
+	parmtag	{ spare_category	"Scripts" } \
+	parm	{ \
+	    name	t##TOKEN \
+	    label	"" \
+	    type	toggle \
+	    default	{ 1 } \
+	    nolabel \
+	    joinnext \
+	} \
+	parm	{ \
+	    name	TOKEN \
+	    label	LABEL \
+	    type	file \
+	    joinnext \
+	    default	{ "" } \
+	    disablewhen	{ { t##TOKEN == 0 } } \
+	    parmtag	{ filechooser_mode	"read" } \
+	} \
+	parm	{ \
+	    name	l##TOKEN \
+	    label	"" \
+	    type	string \
+	    nolabel \
+	    default { "hscript" } \
+	    menu { \
+		"hscript"	"Hscript" \
+		"python"	"Python" \
+	    } \
+	    disablewhen	{ { t##TOKEN == 0 } } \
+	} \
+    }
+
+{
+    name	events
+    label	"Event Scripts"
+    parmtag	{ spare_classtags	"render" }
+
+    parm	{
+	name	event_OnCreated
+	label	"On Created"
+	type	string
+	parmtag	{ spare_category	"HScript Events" }
+    }
+    parm	{
+	name	event_OnDeleted
+	label	"On Deleted"
+	type	string
+	parmtag	{ spare_category	"HScript Events" }
+    }
+    parm	{
+	name	event_OnInputChanged
+	label	"On Input Changed"
+	type	string
+	parmtag	{ spare_category	"HScript Events" }
+    }
+    parm	{
+	name	event_OnLoaded
+	label	"On Loaded"
+	type	string
+	parmtag	{ spare_category	"HScript Events" }
+    }
+    parm	{
+	name	event_OnNameChanged
+	label	"On Name Changed"
+	type	string
+	parmtag	{ spare_category	"HScript Events" }
+    }
+    parm	{
+	name	event_OnUpdated
+	label	"On Updated"
+	type	string
+	parmtag	{ spare_category	"HScript Events" }
+    }
+
+    parm	{
+	name	event_py_OnCreated
+	label	"On Created"
+	type	string
+	parmtag	{ spare_category	"Python Events" }
+    }
+    parm	{
+	name	event_py_OnDeleted
+	label	"On Deleted"
+	type	string
+	parmtag	{ spare_category	"Python Events" }
+    }
+    parm	{
+	name	event_py_OnInputChanged
+	label	"On Input Changed"
+	type	string
+	parmtag	{ spare_category	"Python Events" }
+    }
+    parm	{
+	name	event_py_OnLoaded
+	label	"On Loaded"
+	type	string
+	parmtag	{ spare_category	"Python Events" }
+    }
+    parm	{
+	name	event_py_OnNameChanged
+	label	"On Name Changed"
+	type	string
+	parmtag	{ spare_category	"Python Events" }
+    }
+    parm	{
+	name	event_py_OnUpdated
+	label	"On Updated"
+	type	string
+	parmtag	{ spare_category	"Python Events" }
+    }
+
+    RENDERSCRIPT(prerender,	"Pre-Render Script")
+    RENDERSCRIPT(preframe,	"Pre-Frame Script")
+    RENDERSCRIPT(postframe,	"Post-Frame Script")
+    RENDERSCRIPT(postrender,	"Post-Render Script")
+}
+
+#undef RENDERSCRIPT

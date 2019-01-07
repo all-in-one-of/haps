@@ -1,0 +1,83 @@
+/*
+ * PROPRIETARY INFORMATION.  This software is proprietary to
+ * Side Effects Software Inc., and is not to be reproduced,
+ * transmitted, or disclosed in any way without written permission.
+ *
+ * COMMENTS:
+ *
+ * When rendering for the render viewer, it may be desireable to override some
+ * parameter values.  For example, since the user is asking for a quick preview
+ * render, it may be desireable to change to render to an interactive device.
+ *
+ * The render state provides several parameters which can be used to
+ * evaluate values from the viewport settings.  These are:
+ *
+ *	$cropl, $cropr
+ *	$cropb, $cropt	- The left, right, bottom and top corners of
+ *			  the crop region.
+ *	$socket		- The Houdini socket device listening for tile data
+ *
+ * These overrides are applied to the CAMERA object given in the
+ * initialization of SOHO.
+ *
+ * FILE STRUCTURE:
+ *	Please see ViewportRender for details.
+ *
+ * NOTES:
+ *	This file is used to provide overrides when rendering from the
+ *	render viewer in Houdini.  The render viewer expects the image
+ *	to be written to the socket specified by $socket.  It may be
+ *	necessary to modify the soho programs for the render
+ *	generation to handle this properly.
+ */
+
+// Common viewport overrides.  These are the standard camera parameters.
+{
+    override.name	CommonView
+
+    soho_overridefile	[ "RenderViewer" ]
+    cropl		[ $cropl ]
+    cropr		[ $cropr ]
+    cropb		[ $cropb ]
+    cropt		[ $cropt ]
+    override_camerares	[ $override_camerares ]
+    camera		[ $camera ]
+    soho_outputmode	[ "0" ]		// Force rendering by pipe command
+}
+
+// Viewport overrides for VMantra
+{
+    override.inherit	CommonView
+    override.name	VMantra
+
+    // Force the render to go to the "ip" device
+    vm_picture			[ "ip" ]
+    vm_device			[ "" ]
+    vm_image_mplay_socketport	[ "$socket" ]
+    vm_stylesheets		[ "$stylesheets" ]
+    vm_preview			[ "$preview" ]
+    vm_relightingbuffer		[ "$relightingbuffer" ]
+    vm_renderinterrupt		[ "$renderinterrupt" ]
+    vm_previewtime		[ "$previewtime" ]
+    vm_previewmode		[ "$previewmode" ]
+    vm_generate_opid		[ 1 ]
+}
+
+// Viewport overrides for RIB
+{
+    // This override will be used when a specific target can't be found
+    override.inherit	CommonView
+    override.name	RIB
+
+    ri_device		[ "houdini" ]
+    ri_display		[ "iprsocket:$socket" ]
+}
+
+// Viewport overrides for MI
+{
+    override.inherit		CommonView
+    override.name		MI
+    mi_filename0		[ "socket:$socket" ]
+    mi_filetype0		[ "mplay" ]	// Houdini mplay device
+}
+

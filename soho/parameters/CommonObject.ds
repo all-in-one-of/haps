@@ -1,0 +1,119 @@
+//
+// This document is under CC-3.0 Attribution-Share Alike 3.0
+//       http://creativecommons.org/licenses/by-sa/3.0/
+//  Attribution:  There is no requirement to attribute the author.
+
+// Common object controls.
+//
+// This file defines common macros for most objects.
+// 
+
+#define COMMON_OBJECT_CATEGORIES(NAME, LABEL, FOLDER, HELP) \
+    parm { \
+	name	NAME \
+	label	LABEL \
+	parmtag	{ spare_category FOLDER } \
+	type	string \
+	default	{ "" } \
+	help	HELP \
+    }
+
+#define DEF_COMMON_OBJECT_CATEGORIES() \
+    COMMON_OBJECT_CATEGORIES(categories, "Categories", "Shading", \
+	"A list of tags which can be used to select the object")
+
+#define RIB_COMMON_OBJECT_CATEGORIES() \
+    COMMON_OBJECT_CATEGORIES(categories, "Categories", "Shading", \
+	"Attribute: grouping/membership\nThese tags can also be used to select the object.")
+
+// The "lightmask" and "lightcategories" parameters are evaluated when SOHO
+// is asked to evaluate the "objlist:lightmask" or "objlist:unlightmask"
+// tokens.
+#define	COMMON_OBJECT_LIGHTMASK(FOLDER) \
+    parm { \
+	name	lightmask \
+	label	"Light Mask" \
+	parmtag	{ spare_category FOLDER } \
+	type	oplist \
+	default	{ "*" } \
+	help	"Lights that illuminate this object." \
+	parmtag	{ opfilter "!!OBJ/LIGHT!!" } \
+	parmtag { opexpand "1" } \
+	parmtag { oprelative "/obj" } \
+    } \
+    parm { \
+	name	lightcategories \
+	label	"Light Selection" \
+	parmtag	{ spare_category FOLDER } \
+	type	string \
+	default	{ "*" } \
+    }
+
+// The "shadowmask" and "shadowcategories" parameters are evaluated when
+// SOHO is asked to evaluate the "objlist:shadowmask" or
+// "objlist:unshadowmask" tokens.
+#define COMMON_OBJECT_SHADOWMASK(FOLDER) \
+    parm { \
+	name	shadowmask \
+	label	"Shadow Mask" \
+	parmtag	{ spare_category FOLDER } \
+	type	oplist \
+	default	{ "*" } \
+	help	"Objects that produce shadows from this light." \
+	parmtag	{ opfilter "!!OBJ/GEOMETRY!!" } \
+	parmtag { opexpand "1" } \
+	parmtag { oprelative "/obj" } \
+    } \
+    parm { \
+	name	shadowcategories \
+	label	"Shadow Selection" \
+	parmtag	{ spare_category FOLDER } \
+	type	string \
+	default	{ "-noshadow" } \
+    }
+
+// The "reflectmask" and "reflectcategories" parameters are evaluated when
+// SOHO is asked to evaluate the "objlist:reflectmask" or
+// "objlist:unreflectmask" tokens.
+#define COMMON_OBJECT_REFLECTMASK(FOLDER) \
+    parm { \
+	name	reflectmask \
+	label	"Reflection Mask" \
+	parmtag	{ spare_category FOLDER } \
+	type	oplist \
+	default	{ "*" } \
+	help	"Objects that will be reflected on this object." \
+	parmtag	{ opfilter "!!OBJ/GEOMETRY!!" } \
+	parmtag { opexpand "1" } \
+	parmtag { oprelative "/obj" } \
+    } \
+    parm { \
+	name	reflectcategories \
+	label	"Reflection Selection" \
+	parmtag	{ spare_category FOLDER } \
+	type	string \
+	default	{ "*" } \
+    }
+
+// The "refractmask" and "refractcategories" parameters are evaluated when
+// SOHO is asked to evaluate the "objlist:refractmask" or
+// "objlist:unrefractmask" tokens.
+#define COMMON_OBJECT_REFRACTMASK(FOLDER) \
+    parm { \
+	name	refractmask \
+	label	"Refraction Mask" \
+	parmtag	{ spare_category FOLDER } \
+	type	oplist \
+	default	{ "*" } \
+	help	"Objects that will be refracted on this object." \
+	parmtag	{ opfilter "!!OBJ/GEOMETRY!!" } \
+	parmtag { opexpand "1" } \
+	parmtag { oprelative "/obj" } \
+    } \
+    parm { \
+	name	refractcategories \
+	label	"Refraction Selection" \
+	parmtag	{ spare_category FOLDER } \
+	type	string \
+	default	{ "*" } \
+    }

@@ -1,0 +1,234 @@
+//
+//  This file describes the common viewing parameters that Houdini
+//  expects to be able to find for mapping to the viewport display.
+//
+//  It is strongly suggested that your SOHO render program be aware of
+//  these parameters and use them to describe the view to the renderer.
+//
+//  This file can be included in your parameter description file (see
+//  mantra for an example).
+//
+//
+// This document is under CC-3.0 Attribution-Share Alike 3.0
+//       http://creativecommons.org/licenses/by-sa/3.0/
+//  Attribution:  There is no requirement to attribute the author.
+
+#define RESOLUTION_MENU	\
+	    [ "echo `pythonexprs(\"__import__('toolutils').parseDialogScriptMenu('FBres')\")`" ] \
+	    [ ]
+
+    collection {
+	name	resolution
+	label	"Resolution"
+	parmtag	{ spare_category	"View" }
+	parm {
+	    name	res
+	    label	Resolution
+	    parmtag	{ spare_category	"View" }
+
+	    type	intvector2
+	    default	{ 1280 720 }
+	    parmtag	{ cook_dependent	"1" }
+	    joinnext
+	}
+	parm {
+	    name	resMenu
+	    label	"Choose Resolution"
+	    parmtag	{ spare_category	"View" }
+	    type	button
+	    nolabel
+	    callback	"opparm . res ( `arg(\"$script_value\", 0)` `arg(\"$script_value\", 1)` aspect ( `arg(\"$script_value\", 2)` )"
+	    menumini	{
+		RESOLUTION_MENU
+	    }
+	}
+    }
+    parm {
+	name	aspect
+	label	"Pixel Aspect Ratio"
+	parmtag	{ spare_category "View" }
+	type	float
+	size	1
+	default	{ 1 }
+	range	{ 0.05 2 }
+    }
+    parm {
+	name	projection
+	label	Projection
+	parmtag	{ spare_category	"View" }
+	type	ordinal
+	default	{ "perspective" }
+	menu {
+	    // Names need to match the old camera parameters for now
+	    "perspective"	"Perspective"
+	    "ortho"		"Orthographic"
+	    "sphere"		"Polar (panoramic)"
+	    "cylinder"		"Cylindrical (panoramic)"
+	    "lens"		"Lens Shader"
+	}
+    }
+    parm {
+	name	orthowidth
+	label	"Ortho Width"
+	parmtag	{ spare_category	"View" }
+	type	float
+	default	{ 2 }
+	range	{ 0.001 10 }
+	disablewhen	"{ projection != ortho }"
+    }
+    collection {
+	name	focal_length
+	label	"Focal Length"
+	parmtag	{ spare_category	"View" }
+	parm {
+	    name	focal
+	    label	"Focal Length"
+	    type	float
+	    default	{ 50 }
+	    range	{ 1 100 }
+	    joinnext
+	}
+	parm {
+	    name	focalunits
+	    label	"Focal Units"
+	    type	string
+	    default	{ "mm" }
+	    menu	{
+		"mm"	"millimeters"
+		"m"	"meters"
+		"nm"	"nanometers"
+		"in"	"inches"
+		"ft"	"feet"
+	    }
+	}
+    }
+    parm {
+	name	aperture
+	label	"Aperture"
+	parmtag	{ spare_category	"View" }
+	type	float
+	default	{ 41.42136 }
+	range	{ 1 100 }
+    }
+    parm {
+	name	near
+	label	"Near Clipping"
+	parmtag	{ spare_category	"View" }
+	type	float
+	size	1
+	default	{ 0.001 }
+    }
+    parm {
+	name	far
+	label	"Far Clipping"
+	parmtag	{ spare_category	"View" }
+	type	float
+	size	1
+	default	{ 10000 }
+	range	{ 1 10000 }
+    }
+    collection {
+	name	viewport_window
+	label	"Window"
+	parmtag	{ spare_category	"View" }
+
+	parm	{
+	    name	win
+	    label	"Screen Window X/Y"
+	    type	vector2	
+	    default	{ 0 0 }
+	    range	{ -1 1 }
+            disablewhen "{ winmask != \"\" }"
+	}
+	parm	{
+	    name	winsize
+	    label	"Screen Window Size"
+	    type	vector2
+	    default	{ 1 1 }
+	    range	{ 0.01 10 }
+            disablewhen "{ winmask != \"\" }"
+	}
+	parm	{
+	    name	winmask
+	    label	"Screen Window Mask"
+	    type	oplist
+	    default	{ "" }
+	    parmtag	{ opfilter "!!OBJ/GEOMETRY!!" }
+	    parmtag 	{ opexpand "1" }
+	    parmtag 	{ oprelative "/obj" }
+	    disablewhen	"{ projection != ortho projection != perspective }"
+	}
+    }
+    collection {
+	name	viewport_crop
+	label	"Crop"
+	parmtag	{ spare_category	"View" }
+
+	parm {
+	    name	cropl
+	    label	"Left Crop"
+	    type	float
+	    default	{ 0 }
+	    range	{ 0 1 }
+            disablewhen "{ cropmask != \"\" }"
+	}
+	parm {
+	    name	cropr
+	    label	"Right Crop"
+	    type	float
+	    default	{ 1 }
+	    range	{ 0 1 }
+            disablewhen "{ cropmask != \"\" }"
+	}
+	parm {
+	    name	cropb
+	    label	"Bottom Crop"
+	    type	float
+	    default	{ 0 }
+	    range	{ 0 1 }
+            disablewhen "{ cropmask != \"\" }"
+	}
+	parm {
+	    name	cropt
+	    label	"Top Crop"
+	    type	float
+	    default	{ 1 }
+	    range	{ 0 1 }
+            disablewhen "{ cropmask != \"\" }"
+	}
+	parm	{
+	    name	cropmask
+	    label	"Crop Mask"
+	    type	oplist
+	    default	{ "" }
+	    parmtag	{ opfilter "!!OBJ/GEOMETRY!!" }
+	    parmtag 	{ opexpand "1" }
+	    parmtag 	{ oprelative "/obj" }
+	    disablewhen	"{ projection != ortho projection != perspective }"
+	}
+    }
+
+    parm {
+	name	common_camera
+	label	"Common Camera Parameters"
+	parmtag	{ spare_category	"__spare_parmlist" }
+	parmtag	{ spare_parmlist "resolution aspect projection focal_length aperture orthowidth near far" }
+    }
+
+    parm {
+	name	viewportlod
+	label	"Display As"
+	parmtag	{ spare_category	"Render" }
+	type	ordinal
+	default	{ "full" }
+	menu {
+	    "full"	"Full Geometry"
+	    "points"	"Point Cloud"
+	    "box"	"Bounding Box"
+	    "centroid"	"Centroid"
+	    "hidden"	"Hidden"
+	    "subd"	"Subdivision Surface / Curves"
+	}
+	help	"Choose how the object's geometry should be rendered in the viewport"
+    }
+

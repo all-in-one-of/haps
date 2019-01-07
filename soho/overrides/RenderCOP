@@ -1,0 +1,72 @@
+/*
+ * PROPRIETARY INFORMATION.  This software is proprietary to
+ * Side Effects Software Inc., and is not to be reproduced,
+ * transmitted, or disclosed in any way without written permission.
+ *
+ * COMMENTS:
+ * When the user runs the render command, it's possible that they
+ * specify overrides for particular information on the command line.
+ *
+ * This override file provides the mapping from the options on the
+ * render command to parameters evaluated by SOHO.
+ *
+ *	$imagefile	- The filename to store the image
+ *	$resolution	- The COP resolution
+ *	$aspect		- Aspect ratio from the COP
+ *
+ * These overrides are applied to the CAMERA object given in the
+ * initialization of SOHO.
+ *
+ * FILE STRUCTURE:
+ *	Please see ViewportRender for details.
+ *
+ * NOTES:
+ *	This file is used to provide overrides when the render is
+ *	invoked by the render COP.
+ */
+
+// Common viewport overrides.  These are the standard camera parameters.
+{
+    override.name	CommonCommand
+    soho_overridefile	[ "RenderCOP" ]
+
+    override_camerares	[ 1 ]
+    res_fraction	[ "specific" ]
+    res_override	[ $resolution ]
+    soho_foreground	[ 1 ]		// Always block until render completes
+    soho_outputmode	[ 0 ]		// Force rendering by pipe command
+
+    // soho:fullcamera is used by SOHO to determine whether this
+    // override is able to replace a camera object.  Overrides may be
+    // used to override specific properties, but not necessarily a
+    // camera.  Since this override file just provides a means to pass
+    // command line parms to SOHO, this is *not* a camera override.
+    soho:camera_override	[ 0 ]
+}
+
+// Viewport overrides for VMantra
+{
+    override.inherit	CommonCommand
+    override.name	VMantra
+
+    // Force the render to go to the "ip" device
+    vm_picture		[ $imagefile ]
+    vm_device		[ Houdini ]
+}
+
+// Viewport overrides for RIB
+{
+    override.inherit	CommonCommand
+    override.name	RIB
+
+    ri_display		[ $imagefile ]
+    ri_device		[ file ]
+}
+
+// Viewport overrides for MI
+{
+    override.inherit	CommonCommand
+    override.name	MI
+    mi_filename0	[ $imagefile ]
+    mi_filetype0	[ tif ]
+}

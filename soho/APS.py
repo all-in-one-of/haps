@@ -61,6 +61,19 @@ camera  = parmlist['camera'].Value[0]
 quickexit = parmlist['vm_quickexit'].Value[0]
 propdefs = parmlist['vm_defaults'].Value[0]
 
+if mode != 'default':
+    # Don't allow for nested evaluation in IPR mode
+    inheritedproperties = False
+else:
+    inheritedproperties = parmlist['vm_inheritproperties'].Value[0]
+
+options = {}
+if inheritedproperties:
+    # Turn off object->output driver inheritance
+    options['state:inheritance'] = '-rop'
+if propdefs and propdefs != 'stdin':
+    options['defaults_file'] = propdefs
+
 if not soho.initialize(now, camera, options):
     soho.error("Unable to initialize rendering module with given camera")
 
@@ -148,7 +161,7 @@ soho.removeObjects(now, excludeobject, excludelights, excludefog,
 
 # Lock off the objects we've selected
 soho.lockObjects(now)
-
+# import IFDsettings
 # IFDsettings.clearLists()
 # IFDsettings.initializeFeatures()
 # IFDsettings.setMattePhantomOverrides(now, matte_objects, phantom_objects)
@@ -169,7 +182,6 @@ reload(APSsettings)
 
 FPS = soho.getDefaultedFloat('state:fps', [24])[0]
 FPSinv = 1.0 / FPS
-
 
 aps = APSobj.Appleseed()
 scene    = aps.scene
@@ -204,31 +216,76 @@ if cam.evalFloat("space:world", now, xform):
     xform = hou.Matrix4(xform).transposed().asTuple()
     camera.add(haps.Transform(time=now).add(
         haps.Matrix(xform)))
-
+hou_camera = hou.node(cam.getName())
 scene.add(camera)
-materials_collection = [] # here we track of what we already exported
-exportSOPMaterial(assembly, APSmisc.DEFAULT_MATERIAL_NAME)
 
+materials_collection = [] # here we track of what we already exported
+unique_gdp_collection = [] # here we store unique instanceas (not fast instances)
+materials_map = {}
+
+exportSOPMaterial(assembly, APSmisc.DEFAULT_MATERIAL_NAME)
 mblur_parms = APSmisc.initializeMotionBlur(cam, now)
+
 ##### Basic objects - /obj level - #############################
 for obj in soho.objectList('objlist:instance'):
-    filename, shop_materials = APSframe.outputTesselatedGeo(obj, now, mblur_parms,
-        partition=True)
-    if None in (filename, shop_materials):
+    def_inst_path = [None]
+    obj.evalString('instancepath', now, def_inst_path)
+
+    instancexform = [True]
+    obj.evalInt('instancexform', now, instancexform)
+
+    # Grab the geometry and output the points
+    (geo, npts, attrib_map) = APSmisc.getInstancerAttributes(obj, now)
+    sopid = geo.globalValue('geo:sopid')[0]
+    save_gdp = False
+    if sopid not in unique_gdp_collection:
+        unique_gdp_collection += [sopid]
+        save_gdp = True
+
+    filename = None 
+    shop_materials = []
+
+    filename, shop_materials = APSframe.outputTesselatedGeo(obj, now, 
+        mblur_parms, partition=True, save_gdp=save_gdp)
+    if (None, None) == (filename, shop_materials):
         continue
+    # We need to store it for other instances
+    if not def_inst_path[0]:
+        obj_path = obj.getName()
+    else:
+        obj_path = def_inst_path[0]
+
+    # if not obj_path in materials_map:
+    #     materials_map[obj_path] = shop_materials
+        # export material only once
     for shop in shop_materials:
-        if shop not in materials_collection:
+        if shop and shop not in materials_collection:
             mat = APSframe.outputMaterial(shop, now)
             if mat:
                 aps.Assembly().emplace(mat)
             else:
                 aps.Assembly().insert('DefaultLambertMaterial', shop)
             materials_collection += [shop]
+        # Its buggy now:
+        else:
+            pass
+            # shop_materials = ['default']
+
     # MB for objects
     xforms = APSmisc.get_motionblur_xforms(obj, now, mblur_parms)
     xforms = [haps.Matrix(xform) for xform in xforms]
-    aps.Assembly().insert('MeshObject', obj.getName(), filename=filename, 
-        xforms=xforms, materials=shop_materials, slots=shop_materials)
+    if save_gdp:
+        aps.Assembly().insert('MeshObject', obj.getName(), filename=filename, 
+            xforms=xforms, materials=shop_materials, slots=shop_materials)
+    else:
+        # shop_materials = materials_map[def_inst_path[0]]
+        object_name = def_inst_path[0] + ".default" #!!!
+        aps.Assembly().insert('MeshInstance', obj.getName(), object=object_name, 
+            xforms=xforms, materials=shop_materials, slots=shop_materials)
+       
+
+        # aps.Assembly().
+        #Only instance:
 
 ###### Basic lights ######################################
 for light in soho.objectList('objlist:light'):
@@ -255,24 +312,39 @@ filename = parmlist['soho_diskfile'].Value[0]
 
 
 # We can't emit file to stdout, because appleseed.cli currently doesn't accept stdit 
-with open(filename, 'w') as file:
-    # technically preambule is not part of project object:
-    date      = datetime.strftime(datetime.today(), "%b %d, %Y at %H:%M:%S")
-    stat      = '<!-- Generation time: %g seconds -->' % (time.time() - clockstart)
-    preambule = APSsettings.PREAMBULE.format(
-        houdini_version=hou.applicationVersionString(),
-        aps_version=APSsettings.__version__,
-        date=date,
-        renderer_version=APSsettings.__appleseed_version__,
-        driver=soho.getOutputDriver().getName(),
-        hipfile=hou.hipFile.name(),
-        TIME=now,
-        FPS=FPS,
-        )
+# with open(filename, 'w') as file:
+# technically preambule is not part of project object:
+date      = datetime.strftime(datetime.today(), "%b %d, %Y at %H:%M:%S")
+stat      = '<!-- Generation time: %g seconds -->' % (time.time() - clockstart)
+preambule = APSsettings.PREAMBULE.format(
+    houdini_version=hou.applicationVersionString(),
+    aps_version=APSsettings.__version__,
+    date=date,
+    renderer_version=APSsettings.__appleseed_version__,
+    driver=soho.getOutputDriver().getName(),
+    hipfile=hou.hipFile.name(),
+    TIME=now,
+    FPS=FPS,
+    )
 
-    file.write(preambule)
-    file.write(str(aps.project))
-    file.write(stat)
+if mode == "update": 
+    xform = []
+    cam.evalFloat("space:world", now, xform)
+    xform = hou.Matrix4(xform).transposed().asTuple()
+    xform = " ".join(map(str,xform))
+    print xform
+else:
+    # first line if stdin is (socket, mode) where 0=default, 1=ipr
+    # I would love to have custom tag in appleseed.
+    if mode != 'default':
+        port   = str(soho.getDefaultedInt('vm_image_mplay_socketport', [0])[0])
+        is_ipr = str(soho.getDefaultedInt('vm_preview', [-1])[0])
+        print "{} {}".format(port, is_ipr)
+    # Rest is standard xml
+    print preambule
+    print str(aps.project)
+    # This is trimmed on aps side.
+    print stat
 
 
 

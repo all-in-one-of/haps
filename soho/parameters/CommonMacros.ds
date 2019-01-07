@@ -1,0 +1,42 @@
+/*
+ *  Common macros to generate parameters
+ */
+
+//
+// This document is under CC-3.0 Attribution-Share Alike 3.0
+//       http://creativecommons.org/licenses/by-sa/3.0/
+//  Attribution:  There is no requirement to attribute the author.
+
+#ifndef __SOHO_MACROS__
+#define __SOHO_MACROS__
+
+#define SOHO_PARM(NAME, LABEL, CATEGORY, TYPE, SIZE, DEFAULT)	\
+	name	NAME \
+	label	LABEL \
+	parmtag	{ spare_category CATEGORY } \
+	size	SIZE \
+	type	TYPE \
+	default	{ DEFAULT }
+
+#define SOHO_TOGGLE(NAME, LABEL, CATEGORY, DEFAULT)	\
+    SOHO_PARM(NAME, LABEL, CATEGORY, toggle, 1, DEFAULT)
+
+#define SOHO_INT(NAME, LABEL, CATEGORY, DEFAULT)	\
+    SOHO_PARM(NAME, LABEL, CATEGORY, int, 1, DEFAULT)
+
+#define SOHO_FLOAT(NAME, LABEL, CATEGORY, DEFAULT)	\
+    SOHO_PARM(NAME, LABEL, CATEGORY, float, 1, DEFAULT)
+
+#define SOHO_FLOAT2(NAME, LABEL, CATEGORY, DEFAULT0, DEFAULT1)	\
+    SOHO_PARM(NAME, LABEL, CATEGORY, float, 2, DEFAULT0 DEFAULT1)
+
+#define SOHO_COLOR(NAME, LABEL, CATEGORY, DEFAULT)	\
+    SOHO_PARM(NAME, LABEL, CATEGORY, color, 3, DEFAULT DEFAULT DEFAULT)
+
+#define SOHO_STRING(NAME, LABEL, CATEGORY, DEFAULT)	\
+    SOHO_PARM(NAME, LABEL, CATEGORY, string, 1, DEFAULT)
+
+#define SOHO_FILE(NAME, LABEL, CATEGORY, DEFAULT)	\
+    SOHO_PARM(NAME, LABEL, CATEGORY, file, 1, DEFAULT)
+
+#endif

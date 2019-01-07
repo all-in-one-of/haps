@@ -209,8 +209,8 @@ def Frame(name, **kwargs):
         ("camera", None),
         ("resolution", "1280 720"),  
         ("crop_window", "0 0 1280 720"),
-        ("tile_size" ,  "16 16"), 
-        ("filter",  'blackman-harris'), 
+        ("tile_size" ,  "64 64"), 
+        ("filter",  'gaussian'), 
         ("filter_size", 1.5 )])
     frame = update_parameters(frame, **kwargs)
 
@@ -291,7 +291,7 @@ def TransformBlur(obj, xforms):
         obj.add(haps.Transform(time=timestep*idx).add(xforms[idx]))
     return obj
 
-def MeshObject(name, filename, **kwargs):
+def MeshInstance(name, object, **kwargs):
     """Create mesh object and its instance with xform  applied.
     :parm name:     Name of the object
     :parm filename: Path to file object is saved in
@@ -300,10 +300,8 @@ def MeshObject(name, filename, **kwargs):
                     or xforms (series of xform object) suitable
                     for creating series of transformation blur.
     """
-    obj = haps.Object(name, model='mesh_object')
-    obj.add(haps.Parameter('filename', filename))
-    obj_name = '.'.join([obj.get('name'), 'default']) #FIXME: is it general or only for obj without groups?
-    obj_inst = haps.Object_Instance(name+'_inst', object=obj_name)
+
+    obj_inst = haps.Object_Instance(name, object=object)
 
     # xforms
     xform = kwargs.get('xform') if kwargs.get('xform')\
@@ -330,6 +328,24 @@ def MeshObject(name, filename, **kwargs):
         obj_inst.add(haps.Assign_Material(None, 
             slot=slot, side='back', material=material))
 
+    return obj_inst
+
+
+def MeshObject(name, filename, **kwargs):
+    """Create mesh object and its instance with xform  applied.
+    :parm name:     Name of the object
+    :parm filename: Path to file object is saved in
+    :parm kwargs:   dict of optional parameters: 
+                    xform object (tuple of floats of length 16)
+                    or xforms (series of xform object) suitable
+                    for creating series of transformation blur.
+    """
+    obj = haps.Object(name, model='mesh_object')
+    obj.add(haps.Parameter('filename', filename))
+    #FIXME: is it general or only for obj without groups?
+    obj_name = '.'.join([obj.get('name'), 'default']) 
+    obj_inst = MeshInstance(name+"_inst", object=obj_name, **kwargs)
+
     return obj, obj_inst
 
 
@@ -345,10 +361,10 @@ def InteractiveConfiguration(name='interactive', **kwargs):
                 ("enable_dl", "true"),
                 ("enable_ibl", "true"),
                 ("ibl_env_samples", "1.000000"),
-                ("max_bounces", "-1"),
-                ("max_diffuse_bounces", "-1"),
-                ("max_glossy_bounces", "-1"),
-                ("max_specular_bounces", "-1"),
+                ("max_bounces", "4"),
+                ("max_diffuse_bounces", "4"),
+                ("max_glossy_bounces", "4"),
+                ("max_specular_bounces", "4"),
                 ("next_event_estimation", "true"),
                 ("rr_min_path_length", "6")]))
     return conf
@@ -364,9 +380,12 @@ def FinalConfiguration(name='final', **kwargs):
             ("shading_result_framebuffer", "ephemeral")])
 
     conf.add(haps.Parameters('adaptive_pixel_renderer').add_parms([
-        ('max_samples', 256),
-        ('min_samples', 16),
-        ('quality', 2.0)]))
+        ('max_samples', 1),
+        ('min_samples', 3),
+        ('quality', 1.0)]))
+
+    conf.add(haps.Parameters('uniform_pixel_renderer').add_parms([
+        ('samples', 9),]))
 
     conf.add(haps.Parameters('pt').add_parms([
                 ("dl_light_samples", "1.000000"),
@@ -507,6 +526,9 @@ def MeshLight(name, filename, color=(1,1,1), exposure=0, **kwargs):
     slots     = ('default',)
     absobjs = list(MeshObject(name, filename=filename, 
         xforms=xforms, materials=materials, slots=slots))
+    absobjs[1].add(haps.Parameters("visibility").add_parms([
+                ("camera", "false"),
+                ("shadow", "false")]))
     absobjs += [edf, apscolor, mat]
     return absobjs
 

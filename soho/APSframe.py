@@ -9,7 +9,7 @@ import APSobj
 import math
 
 
-def outputTesselatedGeo(obj, now, mblur_parms, partition=False):
+def outputTesselatedGeo(obj, now, mblur_parms, partition=False, save_gdp=True):
     soppath = obj.getDefaultedString('object:soppath', now, [''])[0]
     gdp     = sohog.SohoGeometry(soppath, now)
     if gdp.Handle < 0:
@@ -20,6 +20,10 @@ def outputTesselatedGeo(obj, now, mblur_parms, partition=False):
     if partition:
         parts = gdp.partition('geo:partattrib', 'shop_materialpath')
         shop_materialpaths = parts.keys()
+
+    if not save_gdp:
+        # early quit if gdp was alredy saved. I need those shops though
+        return None, shop_materialpaths
 
     gdp = gdp.tesselate({'geo:convstyle':'div', 'geo:triangulate':False, 'tess:polysides':4})
     if not gdp:
@@ -189,6 +193,8 @@ def outputMaterial(shop_path, now):
     '''Dirty way to support at least principle (disney) material.'''
     material = soho.getObject(shop_path)
     obj      = hou.node(shop_path)
+    if not obj:
+        raise Exception("This should not happen.")
     # 
     if obj.type().name().startswith('principledshader::'):
         return outputPrincipledShader(obj, now)

@@ -1,0 +1,85 @@
+/*
+ * PROPRIETARY INFORMATION.  This software is proprietary to
+ * Side Effects Software Inc., and is not to be reproduced,
+ * transmitted, or disclosed in any way without written permission.
+ *
+ * COMMENTS:
+ * When the user runs the render command, it's possible that they
+ * specify overrides for particular information on the command line.
+ *
+ * This override file provides the mapping from the options on the
+ * render command to parameters evaluated by SOHO.
+ *
+ *	$over_file		- The -o option (output filename)
+ *	$over_device		- The -d option (output device name)
+ *	$over_flipbook		- The -k option (output to flipbook)
+ *	$frame_range		- The -f option (start/end)
+ *	$frame_increment	- The -i option
+ *	$over_outputmode	- If the -k option is set, this will
+ *				  be set to 0, otherwise it will be
+ *				  set to the parameter value.
+ *
+ * When either the -r option is specified, then:
+ *	$over_res		- Set to 1 (otherwise 0)
+ *	$over_resfraction	- Set to the average of the resolution scale
+ *	$over_specificres	- If $over_resfraction is "specific",
+ *				  stores the actual resolution
+ *
+ * These overrides are applied to the CAMERA object given in the
+ * initialization of SOHO.
+ *
+ * FILE STRUCTURE:
+ *	Please see ViewportRender for details.
+ *
+ * NOTES:
+ *	This file is used to provide overrides when the render is
+ *	invoked by the render command.
+ */
+
+// Common viewport overrides.  These are the standard camera parameters.
+{
+    override.name	CommonCommand
+
+    soho_overridefile	[ "RenderCommand" ]
+    override_camerares	[ $over_res ]
+    res_fraction	[ $over_resfraction ]
+    res_override	[ $over_specificres ]
+    flipbook_output	[ $over_flipbook ]
+    soho_outputmode	[ $over_outputmode ]
+    frame_range		[ $frame_range ]
+    frame_increment	[ $frame_increment ]
+
+    // soho:fullcamera is used by SOHO to determine whether this
+    // override is able to replace a camera object.  Overrides may be
+    // used to override specific properties, but not necessarily a
+    // camera.  Since this override file just provides a means to pass
+    // command line parms to SOHO, this is *not* a camera override.
+    soho:camera_override	[ 0 ]
+}
+
+// Viewport overrides for VMantra
+{
+    override.inherit	CommonCommand
+    override.name	VMantra
+
+    // Force the render to go to the "ip" device
+    vm_picture			[ $over_file ]
+    vm_device			[ $over_device ]
+}
+
+// Viewport overrides for RIB
+{
+    override.inherit	CommonCommand
+    override.name		RIB
+
+    ri_display			[ $over_file ]
+    ri_device			[ $over_device ]
+}
+
+// Viewport overrides for MI
+{
+    override.inherit	CommonCommand
+    override.name		MI
+    mi_filename0		[ $over_file ]
+    mi_filetype0		[ $over_device ]
+}

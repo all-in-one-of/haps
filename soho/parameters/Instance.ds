@@ -1,0 +1,57 @@
+//
+//  Parameters which are used for instancing in Houdini
+//
+//  If these parameters exist on any object, the object will become an
+//  an instance of another object.
+//
+
+//
+// This document is under CC-3.0 Attribution-Share Alike 3.0
+//       http://creativecommons.org/licenses/by-sa/3.0/
+//  Attribution:  There is no requirement to attribute the author.
+
+    parm {
+	name	ptinstance
+	label	"Point Instancing"
+	type	ordinal
+	default	{ "off" }
+	menu	{
+	    "off"	"Off"
+	    "on"	"Full point instancing"
+	    "fast"	"Fast point instancing"
+	}
+	help	"Instance an object at each point in this object's geometry"
+	parmtag	{ spare_category	"Instance" }
+    }
+    parm {
+	name	instancepath
+	label	"Instance Object"
+	type	oppath
+	parmtag	{ opfilter "!!OBJ!!" }
+	default	{ "" }
+	help	"Object to instance"
+	parmtag	{ spare_category	"Instance" }
+    }
+    parm {
+	name	ptmotionblur
+	label	"Point Motion Blur"
+	type	string
+	menu	{
+	    "off"	"No motion blur"
+	    "deform"	"Compute sub-frame geometry (deformation)"
+	    "velocity"	"Use point velocity attribute"
+	}
+	default	{ "deform" }
+	parmtag	{ spare_category	"Instance" }
+	help	"This determines how the point position will be evaluated when transformation blur is enabled on the objects.  It does not turn motion blur on for the points."
+    }
+
+    parm {
+	name	instancexform
+	label	"Instance Transform"
+	type	toggle
+	default	{ 1 }
+	parmtag	{ spare_category	"Instance" }
+
+	help	"Typically, the transform on the instanced object is combined with the object it's being instanced by.  This option allows you to turn off this behaviour."
+    }

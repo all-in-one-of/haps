@@ -1,0 +1,71 @@
+//
+//  This file describes the common control parameters for the SOHO
+//  interface.
+//
+//  This file can be included in your parameter description file (see
+//  mantra for an example).
+//
+//
+// This document is under CC-3.0 Attribution-Share Alike 3.0
+//       http://creativecommons.org/licenses/by-sa/3.0/
+//  Attribution:  There is no requirement to attribute the author.
+    parm {
+	name	soho_spoolrenderoutput
+	label	"Render Output"
+	parmtag	{ spare_category	"Statistics" }
+	type	ordinal
+	default	{ "on" }
+	menu {
+	    "off"	"Don't capture render output"
+	    "on"	"Capture render output for graphical apps"
+	    "force"	"Capture render output for all apps"
+	}
+	help	"Controls whether to capture the render output and add to the node info"
+    }
+
+    parm {
+	name	soho_precision
+	label	"Float Precision"
+	parmtag	{ spare_category	"Formatting" }
+
+	type	int
+	default	{ 9 }
+	range	{ 4 15 }
+	help	"The number of significant floating point digits to output."
+    }
+    parm {
+	name	soho_safename
+	label	"Safe Object names"
+	parmtag	{ spare_category	"Formatting" }
+
+	type	toggle
+	default	{ 0 }
+	help	"If enabled, names will not contain any special characters other than _")
+    }
+    parm {
+	name	soho_indentstep
+	label	"Indent Step"
+	parmtag	{ spare_category	"Formatting" }
+	type	int
+	default	{ 4 }
+	range	{ 0 8 }
+	help	"An indent step of 8 should produce files the same size as an indent step of 1"
+    }
+    parm {
+	name	soho_linewrap
+	label	"Line Wrap"
+	parmtag	{ spare_category	"Formatting" }
+	type	int
+	default	{ 0 }
+	range	{ 0 4 }
+	help	"0 disables line wrap, 1 produces shorter lines than 4"
+    }
+    parm {
+	name	soho_almostzero
+	label	"Almost Zero"
+	parmtag	{ spare_category	"Formatting" }
+	type	float
+	default	{ 0 }
+	range	{ 0 1e-4 }
+	help	"Any number closer to zero than this value will print as a 0."
+    }

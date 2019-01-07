@@ -1,0 +1,25 @@
+//
+//  Houdini Parameters for Alembic
+//
+
+//
+// This document is under CC-3.0 Attribution-Share Alike 3.0
+//       http://creativecommons.org/licenses/by-sa/3.0/
+//  Attribution:  There is no requirement to attribute the author.
+
+#include "CommonMacros.ds"
+
+{
+    name	alembic
+    label	"Alembic"
+    parmtag	{ spare_classtags	"render" }
+
+    parm {
+	name	abc_lock_geom
+	label	"Lock Alembic Geometry"
+	parmtag	{ spare_category	"Render" }
+	type	toggle
+	default	{ 1 }
+	help	"When exporting to an Alembic archive, reuse the first geometry sample for all subsequent samples."
+    }
+}

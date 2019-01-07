@@ -1,0 +1,59 @@
+/*
+ * PROPRIETARY INFORMATION.  This software is proprietary to
+ * Side Effects Software Inc., and is not to be reproduced,
+ * transmitted, or disclosed in any way without written permission.
+ *
+ * COMMENTS:
+ */
+
+// Common viewport overrides.  These are the standard camera parameters.
+{
+    override.name	ThumbnailCamera
+    soho_overridefile	[ "ThumbnailCamera" ]
+
+    // ROP parameter overrides
+    vobject		[ "" ]
+    alights		[ "" ]
+    vfog		[ "" ]
+
+    // Camera parameter overrides
+    space:world [ $xform ]
+    res		[ $res ]
+    aspect	[ 1 ]
+    projection	[ "ortho" ]
+    orthowidth	[ 2.2 ]
+    focal	[ 50 ]
+    aperture	[ 41.4214 ]
+    near	[ 0.001 ]
+    far		[ 1000 ]
+    win		[ 0 0 ]
+    winsize	[ 1 1 ]
+    cropl	[ 0 ]
+    cropr	[ 1 ]
+    cropb	[ 0 ]
+    cropt	[ 1 ]
+}
+
+// Viewport overrides for VMantra
+{
+    override.inherit	ThumbnailCamera
+    override.name	VMantra
+    vm_picture		[ $picture ]
+}
+
+// Viewport overrides for RIB
+{
+    // This override will be used when a specific target can't be found
+    override.inherit	ThumbnailCamera
+    override.name	RIB
+    ri_display		[ $picture ]
+    ri_device		[ "file" ]
+}
+
+// Viewport overrides for MI
+{
+    override.inherit		ThumnailCamera
+    override.name		MI
+    mi_filename0		[ $picture ]
+    mi_filetype0		[ "tif" ]	// Save as .tif
+}
