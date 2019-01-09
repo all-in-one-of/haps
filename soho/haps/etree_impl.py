@@ -24,7 +24,7 @@ class XMLTokens(defaultdict):
 def tostring(element, pretty_print=True):
     """Render element to string with XML document. """
     from StringIO import StringIO
-    return element.toxml(StringIO()).getvalue()
+    return element.toxml(StringIO(), pretty_print).getvalue()
 
 class Element(OrderedDict):
     """Minimal implementation of xml.ElementTree API
@@ -218,7 +218,7 @@ class Element(OrderedDict):
         for child in self:
             # FIXME: Bug is here:
             if isinstance(child, Element):
-                child.toxml(fileio, indent=indent, _level=_level+1)
+                child.toxml(fileio, pretty_print=pp, indent=indent, _level=_level+1)
 
         if etag == XMLTokens.parent_end_tag and not self.text:
             xml_token = XMLTokens.element_template.format(wh=whitespace(_level, indent=indent, pprint=pp),

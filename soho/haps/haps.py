@@ -41,8 +41,8 @@ class HapsObj(Element):
     def __repr__(self):
         return tostring(self)
 
-    def tostring(self):
-        return tostring(self)
+    def tostring(self, pretty_print=True):
+        return tostring(self, pretty_print)
 
     def add_parms(self, parms):
         """Constructs & appends a parameters objects 
