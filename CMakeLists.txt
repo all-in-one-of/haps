@@ -16,7 +16,8 @@ endif()
 set( LZ4_SRC_PATH "$ENV{LZ4_PATH}")
 
 if (NOT EXISTS ${LZ4_SRC_PATH})
-    message(WARNING "Without LZ4 exporter will produce binarmesh version 1")
+    message(WARNING "Without LZ4 exporter will produce binarmesh version 1.
+        \n Consider adding LZ4_PATH env variable pointing to LZ4 source location.")
     set(LZ4_LIB FALSE)
 elseif (${BUILD_WITH_COMPRESSION})
     set(LZ4_LIB TRUE)
@@ -73,5 +74,8 @@ endif()
 
 # Configure several common target properties, such as its output directory.
 houdini_configure_target( ${library_name} )
+
+
+
 
 
