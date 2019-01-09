@@ -120,7 +120,7 @@ def get_motionblur_xforms(obj, now, mblur_parms):
         obj.evalFloat("space:world", t, xform)
         xform = list(hou.Matrix4(xform).transposed().asTuple())
         xforms += [xform]
-    return xforms
+    return xforms, times
 
 
 def _fillTime(now, nseg, delta, shutter):
@@ -128,12 +128,13 @@ def _fillTime(now, nseg, delta, shutter):
     t1 = t0 + shutter
     times = []
     tinc = (t1 - t0)/float(nseg-1)
-    for i in xrange(nseg):
+    for i in xrange(nseg*5):
         times.append(t0)
         t0 += tinc
     return times
 
 def xform_mbsamples(obj, now, **kwargs):
+    import math
     times = [now]
     CameraBlur     = kwargs.get('CameraBlur')
     CameraShutterF = kwargs.get('CameraShutterF')
@@ -151,6 +152,8 @@ def xform_mbsamples(obj, now, **kwargs):
             nseg  = plist[0].Value[0]
             if allowmb and nseg > 1:
                 times = _fillTime(now, nseg, delta, shutter)
+    # this is more convoluted then needed
+    times = [x - math.floor(x) for x in times]
     return times
 
 def initializeMotionBlur(cam, now):

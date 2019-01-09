@@ -12,8 +12,7 @@ PREAMBULE="""<?xml version="1.0" encoding="UTF-8"?>
             APS soho version: {aps_version}
                Output driver: {driver}
                     HIP File: {hipfile}, $T={TIME}, $FPS={FPS}
--->
-"""
+-->"""
 
 oshaderSkipParms = {
     'shop_surfacepath' : SohoParm('shop_disable_surface_shader',  

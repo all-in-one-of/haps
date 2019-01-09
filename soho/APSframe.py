@@ -21,9 +21,12 @@ def outputTesselatedGeo(obj, now, mblur_parms, partition=False, save_gdp=True):
         parts = gdp.partition('geo:partattrib', 'shop_materialpath')
         shop_materialpaths = parts.keys()
 
+    shop_materialpaths = ['default' if shop == '' \
+        else shop for shop in shop_materialpaths]
+
     if not save_gdp:
         # early quit if gdp was alredy saved. I need those shops though
-        return None, shop_materialpaths
+        return None, str(shop_materialpaths)
 
     gdp = gdp.tesselate({'geo:convstyle':'div', 'geo:triangulate':False, 'tess:polysides':4})
     if not gdp:
@@ -47,8 +50,7 @@ def outputTesselatedGeo(obj, now, mblur_parms, partition=False, save_gdp=True):
 def outputLight(light, now, mblur_parms):
     # Find the wrangler for evaluating soho parameters
     wrangler = APSsettings.getWrangler(light, now, 'light_wrangler')
-    xforms   = APSmisc.get_motionblur_xforms(light, now, mblur_parms)
-    xforms   = [haps.Matrix(xform) for xform in xforms]
+    xforms, times  = APSmisc.get_motionblur_xforms(light, now, mblur_parms)
 
     wrangler  = APSsettings.getWrangler(light, now, 'light_wrangler')
     ltype     = light.wrangleString(wrangler, 'vm_areashape', now, [''])[0]
@@ -84,19 +86,10 @@ def outputLight(light, now, mblur_parms):
             light.getDefaultedString('object:soppath', now, [''])[0], filename))
         return 
     # TODO: some basics geometry shader support.
-    xforms  = APSmisc.get_motionblur_xforms(light, now, mblur_parms)
+    xforms, times  = APSmisc.get_motionblur_xforms(light, now, mblur_parms)
     return APSobj.MeshLight(light.getName(), filename, color, exposure, 
-        xforms=xforms)
+        xforms=xforms, times=times)
 
-    return None
-
-    # objectTransform('space:world', light, times)
-
-    # if isGeoLight(light, wrangler, now):
-    #     IFDgeo.instanceGeometry(light, now, times)
-
-    # IFDsettings.outputObject(light, now, wrangler=wrangler)
-    # IFDsettings.outputLight(wrangler, light, now)
 
 def outputPrincipledShader(obj, now):
     '''Don't know how to use shop clerks at the moment.'''
@@ -189,11 +182,13 @@ def outputPrincipledShader(obj, now):
 
 
 
-def outputMaterial(shop_path, now):
+def outputMaterial(shop_path, now, skip='default'):
     '''Dirty way to support at least principle (disney) material.'''
+    if shop_path == skip:
+        return None
     material = soho.getObject(shop_path)
     obj      = hou.node(shop_path)
-    if not obj:
+    if not obj and shop_path != skip:
         raise Exception("This should not happen.")
     # 
     if obj.type().name().startswith('principledshader::'):

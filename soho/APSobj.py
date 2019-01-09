@@ -86,7 +86,7 @@ class Appleseed(object):
         """Creates bare minimum."""
         self.project = haps.Project()
         self.Scene() 
-        self.Assembly() # Just default one.
+        # self.Assembly() # Just default one.
         # self.Config()
         # self.Output()
 
@@ -140,10 +140,12 @@ class Appleseed(object):
         return self.TypeFactory(self.output)
 
 
-def update_parameters(obj, **kwargs):
+def update_parameters_no_req(obj, **kwargs):
     """Update object's parmaters with provided **kwargs.
     This is a helper function usually called by objects
-    containing many parameters. TODO: we might move it into some object.
+    containing many parameters.
+    (TODO: to be removed as recursive version
+    prove its strength.)
 
     :parm obj:      HapsObj to be updated
     :parm **kwargs: Python **kwargs arguments: name_of_parm=new_value
@@ -151,15 +153,57 @@ def update_parameters(obj, **kwargs):
     """
     for key, value in kwargs.items():
         parm = obj.get_by_name(key)
-        # Ignore 
         if not parm:
-            # logger.debug('Ignoring non existing parm: %s' % key)
             continue
         if isinstance(value, collections.Iterable) and \
         not  isinstance(value, types.StringTypes):
             value = ' '.join(map(str, value))
         parm.set('value', value)
     return obj
+
+
+def update_parameters(obj, **kwargs):
+    """Update object's parmaters with provided **kwargs.
+    This is a helper function usually called by objects
+    containing many parameters. This function supports 
+    update using /path/entitiy notation (recursive).
+    :parm obj:      HapsObj to be updated
+
+    :parm **kwargs: Python **kwargs arguments: name_of_parm=new_value
+    :returns      : Modified object
+    """
+    def extract_root_from_path(path, denominator='/'):
+        # can I use posixpath here?
+        tree = path.split(denominator)
+        if len(tree) == 1: 
+            return tree, []
+        else: 
+            return tree[0], denominator.join(tree[1:])
+
+    for key, value in kwargs.items():
+        parm = obj.get_by_name(key)
+        # No match here 
+        if not parm: 
+            parent, children = extract_root_from_path(key)
+            parm = obj.get_by_name(parent)
+            # and not bellow
+            if not parm:
+                continue
+            # send request deeper
+            children_kwargs = {children: value}
+            update_parameters(parm, **children_kwargs)
+        else:
+            # else do as usual
+            if isinstance(value, collections.Iterable) and \
+            not  isinstance(value, types.StringTypes):
+                value = ' '.join(map(str, value))
+            parm.set('value', value)
+
+    return obj
+
+
+
+
 
 
             
@@ -196,6 +240,14 @@ def PinholeCamera(name, **kwargs):
         ("horizontal_fov",   45),
         ("near_z",  -0.001)])
     camera = update_parameters(camera, **kwargs)
+
+    xforms = kwargs.get('xforms')
+    times  = kwargs.get('times')
+    if not xforms:
+        xforms = [haps.Matrix.identity]
+        times  = [0.0]
+    camera = TransformBlur(camera, xforms, times)
+
     return camera
 
 # TODO: make choices predefined (enumarator style)
@@ -277,47 +329,59 @@ def Color(name, values=[1,1,1], alpha=1.0, **kwargs):
     return color
     
 
-def TransformBlur(obj, xforms):
+def TransformBlur(obj, xforms, times=[]):
     """Insert series of Transform object from provided matrices
     :parm obj:    Assembly, Object, Light, etc
     :parm xform:  List of Matrix obj.
     :returns:     modified obj
 
     """
-    timestep = 1.0 / len(xforms)
     assert(isinstance(xforms, collections.Iterable))
-    for idx in range(len(xforms)):
-        assert(isinstance(xforms[idx], haps.Matrix))
-        obj.add(haps.Transform(time=timestep*idx).add(xforms[idx]))
+
+    if not times:
+        for step in range(len(xforms)):
+            times += [1.0/step]
+
+    assert(len(xforms) == len(times))
+
+    for time, xform in zip(times, xforms):
+        assert(isinstance(xform, collections.Iterable))
+        assert(len(xform) == 16)
+        assert(isinstance(time, float))
+        obj.add(haps.Transform(time=time).add(haps.Matrix(xform)))
+
     return obj
 
 def MeshInstance(name, object, **kwargs):
-    """Create mesh object and its instance with xform  applied.
-    :parm name:     Name of the object
-    :parm filename: Path to file object is saved in
-    :parm kwargs:   dict of optional parameters: 
-                    xform object (tuple of floats of length 16)
-                    or xforms (series of xform object) suitable
-                    for creating series of transformation blur.
+    """Create mesh instance with xform  applied.
+    :parm name     : Name of the object we are instance of
+    :parm materials: List of materials we will assign
+    :parm slots    : List of slots we will assign to
+    :parm xforms   : list of tuples/lists with 4x4 floats (can be None)
+    :parm times    : list of times samples for xforms    (can be None)
+    :parm kwargs   : additional args          
     """
-
     obj_inst = haps.Object_Instance(name, object=object)
 
-    # xforms
-    xform = kwargs.get('xform') if kwargs.get('xform')\
-        else haps.Matrix()
-    if not kwargs.get('xforms'):
-        obj_inst.add(haps.Transform().add(xform))
-    else:
-        obj_inst = TransformBlur(obj_inst, kwargs.get('xforms'))
+    # This is ugly, but I don't know how to add only stuff
+    # which is not at default state now.
+    if True in [key.startswith('visibility') for key in kwargs]:
+        obj_inst.add(haps.Parameters('visibility').add_parms([
+            ('shadow',   'true'),
+            ('camera',   'true'),
+            ('specular', 'true'),
+            ('glossy' ,  'true'),
+            ]))
 
-    # materials:
-    if not kwargs.get('materials'):
-        slots     = ('default',)
-        materials = ('default',)
-    else:
-        slots     = kwargs.get('slots')
-        materials = kwargs.get('materials')
+    obj_inst = update_parameters(obj_inst, **kwargs)
+
+    xforms    = kwargs.get('xforms') # [] is correct
+    times     = kwargs.get('times')
+    materials = kwargs.get('materials')
+    slots     = kwargs.get('slots')
+
+    if xforms and times:
+        obj_inst = TransformBlur(obj_inst, xforms, times)
 
     assert(isinstance(slots,     collections.Iterable))
     assert(isinstance(materials, collections.Iterable))
@@ -332,7 +396,7 @@ def MeshInstance(name, object, **kwargs):
 
 
 def MeshObject(name, filename, **kwargs):
-    """Create mesh object and its instance with xform  applied.
+    """Create mesh object and its instance with xform applied.
     :parm name:     Name of the object
     :parm filename: Path to file object is saved in
     :parm kwargs:   dict of optional parameters: 
@@ -340,13 +404,51 @@ def MeshObject(name, filename, **kwargs):
                     or xforms (series of xform object) suitable
                     for creating series of transformation blur.
     """
+
     obj = haps.Object(name, model='mesh_object')
     obj.add(haps.Parameter('filename', filename))
-    #FIXME: is it general or only for obj without groups?
     obj_name = '.'.join([obj.get('name'), 'default']) 
-    obj_inst = MeshInstance(name+"_inst", object=obj_name, **kwargs)
+
+
+    obj_inst = MeshInstance(name+"_inst", object=obj_name,  **kwargs)
 
     return obj, obj_inst
+
+
+def AssemblyInstance(name, assembly, **kwargs):
+    '''An instance of the assembly. Has own trasform and visibility flags.
+    '''
+    assembly_inst = haps.Assembly_Instance(name, assembly=assembly)
+    if True in [key.startswith('visibility') for key in kwargs]:
+        assembly_inst.add(haps.Parameters('visibility').add_parms([
+            ('shadow',   'true'),
+            ('camera',   'true'),
+            ]))
+    xforms = kwargs.get('xforms') # [] is correct
+    times  = kwargs.get('times')
+    
+    if xforms and times:
+        assembly_inst = TransformBlur(assembly_inst, xforms, times)
+
+    assembly_inst = update_parameters(assembly_inst, **kwargs)
+
+    return assembly_inst
+
+def AssemblyObject(name, filenames, list_of_kwargs, **kwargs):
+    """Creates an assembly from one or multiply objects.
+       all kwargs becomes tuples of kwargs.
+    """
+    members = []
+    for filename, _kwargs in zip(filenames, list_of_kwargs):
+        # print filename
+        # print _kwargs
+        members += MeshObject(name, filename, **_kwargs)
+
+    assembly = haps.Assembly(name)
+    assembly.add(members)
+
+    inst   = AssemblyInstance(name+"_inst", name,  **kwargs)
+    return assembly, inst
 
 
 def InteractiveConfiguration(name='interactive', **kwargs):
@@ -473,6 +575,7 @@ def DisneyMaterial(name, layers=1, **kwargs):
 
 
 def PointLight(name, **kwargs):
+    '''Non-physical point light'''
     light = haps.Light(name, model='point_light')
     light.add_parms([
         ('cast_indirect_light', True),
@@ -481,18 +584,13 @@ def PointLight(name, **kwargs):
         ('intensity', 1.0),
         ('intensity_multiplier', 1.0)
         ])
-    light = update_parameters(light, **kwargs)
-    # xforms
-    xform = kwargs.get('xform') if kwargs.get('xform')\
-        else haps.Matrix()
-    if not kwargs.get('xforms'):
-        light.add(haps.Transform().add(xform))
-    else:
-        light = TransformBlur(light, kwargs.get('xforms'))
+
+    light  = update_parameters(light, **kwargs)
     return light
 
 
 def Edf(name, model, **kwargs):
+    '''Edf mostly for geometry lights.'''
     edf = haps.Edf(name, model=model)
     edf.add_parms([
         ("cast_indirect_light", True),
@@ -507,30 +605,30 @@ def Edf(name, model, **kwargs):
 
 
 def MeshLight(name, filename, color=(1,1,1), exposure=0, **kwargs):
-    """ Create gometry light. """
-    cname = name+'/color'
-    apscolor = Color(cname, values=color, alpha=1.0)
+    """ Geometry light is normals meshe with Edf applied
+    on its material.
+    """
+    color_name = name+'/color'
+    color_obj  = Color(color_name, values=color, alpha=1.0)
 
     edf = Edf(name + '_edf', model='diffuse_edf', 
-        radiance=cname, exposure=exposure, radiance_multiplier=1)
+        radiance=color_name, exposure=exposure, radiance_multiplier=1)
 
-    mat = haps.Material(name+ '_material', model='generic_material').add(
+    material = haps.Material(name+ '_material', model='generic_material').add(
         haps.Parameter('edf', edf.get('name')))
 
-    if not kwargs.get('xforms'): 
-        xforms = [haps.Matrix()]
-    else:
-        xforms = [haps.Matrix(xform) for xform in kwargs.get('xforms')]
-
-    materials = (mat.get('name'),)
+    materials = (material.get('name'),)
     slots     = ('default',)
-    absobjs = list(MeshObject(name, filename=filename, 
-        xforms=xforms, materials=materials, slots=slots))
-    absobjs[1].add(haps.Parameters("visibility").add_parms([
-                ("camera", "false"),
-                ("shadow", "false")]))
-    absobjs += [edf, apscolor, mat]
-    return absobjs
+
+    kwargs['visibility/camera'] = 'false'
+    kwargs['visibility/shadow'] = 'false'
+
+    light_objs = list(MeshObject(name, filename=filename, materials=materials, 
+        slots=slots,  **kwargs))
+   
+    light_objs += [edf, color_obj , material]
+    return light_objs
+
 
 def DiskTexture2D(name, filename, **kwargs):
     texture = haps.Texture(name, model='disk_texture_2d').add_parms([

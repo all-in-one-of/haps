@@ -180,12 +180,12 @@ reload(haps)
 reload(APSobj)
 reload(APSsettings)
 
+mblur_parms = APSmisc.initializeMotionBlur(cam, now)
 FPS = soho.getDefaultedFloat('state:fps', [24])[0]
 FPSinv = 1.0 / FPS
 
 aps = APSobj.Appleseed()
 scene    = aps.scene
-assembly = aps.assembly
 
 
 def exportSOPMaterial(assembly, material_path):
@@ -199,6 +199,8 @@ from math import atan, degrees
 aperture = cam.getDefaultedFloat('aperture', now, [1])[0]
 focal    = cam.getDefaultedFloat('focal', now, [24])[0]
 fovx     =  2 * atan((aperture/2) / focal)    
+xforms, times = APSmisc.get_motionblur_xforms(cam, now, mblur_parms)
+
 camera_parms = {'shutter_open_time' : 0.0 # FIXME (in mantra this lives on rop)
             ,   'shutter_close_time': cam.getDefaultedFloat('shutter', now, [0])[0]
             ,   'film_dimensions'   : (cam.getDefaultedInt('res', now, [0,0])[0] / 100.0, 
@@ -206,30 +208,38 @@ camera_parms = {'shutter_open_time' : 0.0 # FIXME (in mantra this lives on rop)
             ,   'focal_length'      : cam.getDefaultedInt('focal', now, [0,0])[0] / 100.0
             ,   'horizontal_fov'    : degrees(fovx)    
             ,   'near_z'            : cam.getDefaultedFloat('near', now, [0.1])[0] * -1
-    }
+            ,   'xforms'            : xforms
+            ,   'times'             : times
+}
 
 
 ##### CAMERA - Pinhole camera - for now ###################
 camera = APSobj.PinholeCamera(cam.getName(), **camera_parms)
-xform  = []
-if cam.evalFloat("space:world", now, xform):
-    xform = hou.Matrix4(xform).transposed().asTuple()
-    camera.add(haps.Transform(time=now).add(
-        haps.Matrix(xform)))
-hou_camera = hou.node(cam.getName())
+port   = str(soho.getDefaultedInt('vm_image_mplay_socketport', [0])[0])
+is_ipr = str(soho.getDefaultedInt('vm_preview', [-1])[0])
+# These are custom params to notify Appleseed about our plans
+camera.add_parms([
+    ("socketport", port),
+    ("preview",   is_ipr) # 1 for ipr 0 for normal (and -1 if render to disk)
+    ])
+
 scene.add(camera)
 
-materials_collection = [] # here we track of what we already exported
+# materials_collection = [] # here we track of what we already exported
 unique_gdp_collection = [] # here we store unique instanceas (not fast instances)
 materials_map = {}
+instance_referenced_gdps = []
 
-exportSOPMaterial(assembly, APSmisc.DEFAULT_MATERIAL_NAME)
-mblur_parms = APSmisc.initializeMotionBlur(cam, now)
 
-##### Basic objects - /obj level - #############################
+
+##### Basic objects  and instances - TODO: HDAs? - ###########################
 for obj in soho.objectList('objlist:instance'):
     def_inst_path = [None]
     obj.evalString('instancepath', now, def_inst_path)
+    # Here we keep track of gpds which are not visible but referenced by instancers.
+    if def_inst_path[0] not in instance_referenced_gdps:
+        instance_referenced_gdps += def_inst_path
+        # aps.Scene().insert("MeshObject", obj.getName(), )
 
     instancexform = [True]
     obj.evalInt('instancexform', now, instancexform)
@@ -237,55 +247,69 @@ for obj in soho.objectList('objlist:instance'):
     # Grab the geometry and output the points
     (geo, npts, attrib_map) = APSmisc.getInstancerAttributes(obj, now)
     sopid = geo.globalValue('geo:sopid')[0]
-    save_gdp = False
+
+    # Save detail on disk only once
+    unique_gdp = False
     if sopid not in unique_gdp_collection:
         unique_gdp_collection += [sopid]
-        save_gdp = True
+        unique_gdp = True
 
     filename = None 
     shop_materials = []
 
     filename, shop_materials = APSframe.outputTesselatedGeo(obj, now, 
-        mblur_parms, partition=True, save_gdp=save_gdp)
+        mblur_parms, partition=True, save_gdp=unique_gdp)
+
+    #No filename nor shop material?
     if (None, None) == (filename, shop_materials):
         continue
-    # We need to store it for other instances
-    if not def_inst_path[0]:
-        obj_path = obj.getName()
-    else:
-        obj_path = def_inst_path[0]
-
-    # if not obj_path in materials_map:
-    #     materials_map[obj_path] = shop_materials
-        # export material only once
-    for shop in shop_materials:
-        if shop and shop not in materials_collection:
-            mat = APSframe.outputMaterial(shop, now)
-            if mat:
-                aps.Assembly().emplace(mat)
-            else:
-                aps.Assembly().insert('DefaultLambertMaterial', shop)
-            materials_collection += [shop]
-        # Its buggy now:
-        else:
-            pass
-            # shop_materials = ['default']
 
     # MB for objects
-    xforms = APSmisc.get_motionblur_xforms(obj, now, mblur_parms)
-    xforms = [haps.Matrix(xform) for xform in xforms]
-    if save_gdp:
-        aps.Assembly().insert('MeshObject', obj.getName(), filename=filename, 
-            xforms=xforms, materials=shop_materials, slots=shop_materials)
-    else:
-        # shop_materials = materials_map[def_inst_path[0]]
-        object_name = def_inst_path[0] + ".default" #!!!
-        aps.Assembly().insert('MeshInstance', obj.getName(), object=object_name, 
-            xforms=xforms, materials=shop_materials, slots=shop_materials)
-       
+    xforms, times  = APSmisc.get_motionblur_xforms(obj, now, mblur_parms)
+    # This assembly holds single object which won't be saved again. 
+    if unique_gdp:
+        assembly_materials = []
+        kwargs = [{'materials': shop_materials, 
+                    'slots':    shop_materials, }]
 
-        # aps.Assembly().
-        #Only instance:
+        # This object container.  
+        aps.Scene().insert('AssemblyObject', obj.getName(), filenames=[filename,], 
+            list_of_kwargs=kwargs, xforms=xforms, times=times)
+
+        # If we are unique but def_instant_path is not empty
+        # we have to export  source (instanced) geometry. Otherwise instances 
+        # wont work with visibility flag set to False in Houdini (which is usually the case)
+        if def_inst_path != [None]:
+            ghost_object_name = def_inst_path[0]
+            visibility_flags = {'visibility/camera':'false', 'visibility/shadow': 'false', 
+                                'visibility/probe': 'false'}
+            aps.Scene().insert('AssemblyObject', ghost_object_name, filenames=[filename,],
+                list_of_kwargs=kwargs, **visibility_flags)
+            #Not sure if we need it 
+            aps.Assembly(ghost_object_name).emplace(
+                APSobj.DefaultLambertMaterial(APSmisc.DEFAULT_MATERIAL_NAME))
+            for shop in shop_materials:
+                aps.Assembly(ghost_object_name).emplace(APSframe.outputMaterial(shop, now))
+
+        #Add default material (again we should not need so many og them)
+        aps.Assembly(obj.getName()).emplace(
+            APSobj.DefaultLambertMaterial(APSmisc.DEFAULT_MATERIAL_NAME))
+        #Add materials
+        for shop in shop_materials:
+            if shop and shop not in assembly_materials:
+                mat = APSframe.outputMaterial(shop, now)
+                if mat:
+                    aps.Assembly(obj.getName()).emplace(mat)
+                    assembly_materials += [shop]
+           
+    else:
+        # This is an instance of the assembly object already exported.
+        # Geometry mesh was exported too.
+        ass_name = def_inst_path[0]
+        ass_inst = haps.Assembly_Instance(obj.getName()+"_inst", assembly=ass_name)
+        ass_inst = APSobj.TransformBlur(ass_inst, xforms, times)
+        aps.Scene().emplace(ass_inst)
+       
 
 ###### Basic lights ######################################
 for light in soho.objectList('objlist:light'):
@@ -337,14 +361,13 @@ else:
     # first line if stdin is (socket, mode) where 0=default, 1=ipr
     # I would love to have custom tag in appleseed.
     if mode != 'default':
-        port   = str(soho.getDefaultedInt('vm_image_mplay_socketport', [0])[0])
-        is_ipr = str(soho.getDefaultedInt('vm_preview', [-1])[0])
-        print "{} {}".format(port, is_ipr)
+        # this is special case for pipeing
+        print aps.project.tostring(pretty_print=False)
     # Rest is standard xml
-    print preambule
-    print str(aps.project)
-    # This is trimmed on aps side.
-    print stat
+    else:
+        print preambule
+        print str(aps.project)
+        print stat
 
 
 
