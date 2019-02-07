@@ -133,15 +133,15 @@ private:
  };
 
  template <typename T>
-bool parse_string_to_digits(const std::string &line, std::vector<T> &array, const size_t size = 16)
+bool parse_string_to_digits(const std::string &string, std::vector<T> &digits, const size_t expected_size = 16)
 {
-    std::istringstream iss(line);
+    std::istringstream iss(string);
 
     std::copy(std::istream_iterator<T>(iss),
         std::istream_iterator<T>(),
-        std::back_inserter(array));
+        std::back_inserter(digits));
 
-    if (array.size() != size)
+    if (digits.size() != expected_size)
         return false;
 
     return true;
