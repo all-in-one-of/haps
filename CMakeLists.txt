@@ -1,81 +1,85 @@
-# Specify the minimum required version of CMake to build the project.
-cmake_minimum_required( VERSION 3.4 )
-project( GEOappleseedTranslator )
+#
+# This source file is part of appleseed.
+# Visit https://appleseedhq.net/ for additional information and resources.
+#
+# This software is released under the MIT license.
+#
+# Copyright (c) 2016-2018 Esteban Tovagliari, The appleseedhq Organization
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+# THE SOFTWARE.
+#
 
-list( APPEND CMAKE_PREFIX_PATH "$ENV{HT}/cmake")
-find_package( Houdini REQUIRED )
+#--------------------------------------------------------------------------------------------------
+# CMake configuration.
+#--------------------------------------------------------------------------------------------------
 
-OPTION(BINARYMESH_VERSION_4 "BINARYMESH_VERSION_4" ON)
-OPTION(BINARYMESH_VERSION_3 "BINARYMESH_VERSION_3" ON)
-OPTION(BINARYMESH_VERSION_1 "BINARYMESH_VERSION_1" ON)
+cmake_minimum_required (VERSION 3.4 FATAL_ERROR)
 
-if(BINARYMESH_VERSION_4 OR BINARYMESH_VERSION_3)
-    set(BUILD_WITH_COMPRESSION TRUE)
-endif()
-# lz4 if you will
-set( LZ4_SRC_PATH "$ENV{LZ4_PATH}")
+#--------------------------------------------------------------------------------------------------
+# Project configuration.
+#--------------------------------------------------------------------------------------------------
 
-if (NOT EXISTS ${LZ4_SRC_PATH})
-    message(WARNING "Without LZ4 exporter will produce binarmesh version 1.
-        \n Consider adding LZ4_PATH env variable pointing to LZ4 source location.")
-    set(LZ4_LIB FALSE)
-elseif (${BUILD_WITH_COMPRESSION})
-    set(LZ4_LIB TRUE)
-        message(STATUS "Building with LZ4")
-endif()
+# Prevent in-source builds.
+if (${CMAKE_SOURCE_DIR} STREQUAL ${CMAKE_BINARY_DIR})
+    message (FATAL_ERROR "In-source builds are not permitted; run CMake inside an empty build directory.")
+endif ()
 
-if(${LZ4_LIB})
-    if (BINARYMESH_VERSION_4)
-        add_definitions(-DBINARYMESH_VERSION_4)
-        message(STATUS "Building for BINARYMESH_VERSION_4")
-    elseif (BINARYMESH_VERSION_3)
-        add_definitions(-DBINARYMESH_VERSION_3)
-        message(STATUS "Building for BINARYMESH_VERSION_3")
-    endif()
-else()
-    if (${BUILD_WITH_COMPRESSION})
-        message(WARNING "Options BINARYMESH_VERSION_3 or BINARYMESH_VERSION_4 are set, \
-            but no LZ4 found.\n We will build with BINARYMESH_VERSION_1")
-    endif()
-        add_definitions(-DBINARYMESH_VERSION_1)
-        message(STATUS "Building for BINARYMESH_VERSION_1")
-endif()
+# Create build configurations. Must come before project ().
+set (CMAKE_CONFIGURATION_TYPES "Debug;Release" CACHE STRING "" FORCE)
 
-if (${LZ4_LIB} AND ${BUILD_WITH_COMPRESSION})
-    add_definitions(-DLZ4)
-    set (lz4_sources
-        ${LZ4_SRC_PATH}/lz4.c
-        ${LZ4_SRC_PATH}/lz4.h
-        ${LZ4_SRC_PATH}/lz4hc.c
-        ${LZ4_SRC_PATH}/lz4hc.h
-    )
-    add_library( lz4 STATIC ${lz4_sources} )
-    include_directories( ${LZ4_SRC_PATH} )
+# Select a build configuration if none is selected yet.
+if (NOT CMAKE_BUILD_TYPE)
+    set (CMAKE_BUILD_TYPE Debug
+         CACHE STRING "Choose the type of build, options are: ${CMAKE_CONFIGURATION_TYPES}" FORCE)
+    set_property (CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS ${CMAKE_CONFIGURATION_TYPES})
+endif ()
 
-endif()
+project (appleseed-houdini)
 
-set( CMAKE_BUILD_TYPE Debug)
-
-# Add a library with two source files.
-set( library_name GEOappleseedTranslator )
-
-add_library( ${library_name} SHARED
-    src/GEOappleseedTranslator.cpp
-    src/binarymesh.h
+# Must come after project ().
+set (CMAKE_MODULE_PATH
+    ${CMAKE_MODULE_PATH}
+    ${PROJECT_SOURCE_DIR}/cmake/Modules
 )
 
-# Link against the Houdini libraries, and add required include directories and compile definitions.
-target_link_libraries( ${library_name} Houdini )
-target_link_libraries( ${library_name} tbb )
+list( APPEND CMAKE_PREFIX_PATH "$ENV{HT}/cmake")
 
-if (${LZ4_LIB} AND ${BUILD_WITH_COMPRESSION})
-    target_link_libraries( ${library_name} lz4 )
-endif()
+#--------------------------------------------------------------------------------------------------
+# Version.
+#--------------------------------------------------------------------------------------------------
 
-# Configure several common target properties, such as its output directory.
-houdini_configure_target( ${library_name} )
+set (appleseed_houdini_version_major       0)
+set (appleseed_houdini_version_minor       1)
+set (appleseed_houdini_version_patch       0)
+set (appleseed_houdini_version_maturity    beta)
 
+#--------------------------------------------------------------------------------------------------
+# Find external packages.
+#--------------------------------------------------------------------------------------------------
 
+find_package (Appleseed REQUIRED)
+find_package (Houdini   REQUIRED)
+message (STATUS "Houdini HDK: ${Houdini_VERSION}")
 
+#--------------------------------------------------------------------------------------------------
+# Products.
+#--------------------------------------------------------------------------------------------------
 
-
+add_subdirectory (src/dso)
+add_subdirectory (src/render)
