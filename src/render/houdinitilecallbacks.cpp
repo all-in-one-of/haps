@@ -65,14 +65,7 @@ using namespace std;
 //
 namespace HAPS {
 
-
-HoudiniTileCallback* 
-HoudiniTileCallback::createCallback(IMG_TileDevice* device) 
-{
-        return new HoudiniTileCallback(device);
-}
-
-template <typename T>
+template <typename T> 
 inline void 
 flip_tile(const T* source, const size_t wt, const size_t ht, 
     const size_t ch, T* destination)
@@ -84,6 +77,13 @@ flip_tile(const T* source, const size_t wt, const size_t ht,
                 &source[source_index], wt*ch*sizeof(T));        
     }
 }
+
+HoudiniTileCallback* 
+HoudiniTileCallback::createCallback(IMG_TileDevice* device) 
+{
+        return new HoudiniTileCallback(device);
+}
+
 
 void 
 HoudiniTileCallback::send_tile(const renderer::Frame* frame, 
