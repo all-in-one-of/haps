@@ -31,63 +31,114 @@
 namespace HDK_HAPS
 {
 
-void write_header(std::ostream &fs) {
+// Write a binarymesh header to the stream
+void write_header(std::ostream &os) 
+{
     const char   header[]   = {'B', 'I', 'N', 'A', 'R', 'Y', 'M', 'E', 'S', 'H'};
     const ushort version    = BINARYMESH_VERSION;
-    fs.write(header, 10);
-    fs.write((char*)&version, 2);
+    os.write(header, 10);
+    os.write((char*)&version, 2);
 }
 
-size_t write_part_name(std::ostream & fs, const char *group) {
+// Write a part name into the stream
+size_t write_part_name(std::ostream & os, const char *group) 
+{
     const ushort length = strlen(group);
-    fs.write((char*)&length, sizeof(ushort));
-    fs.write(group, length*sizeof(char));
+    os.write((char*)&length, sizeof(ushort));
+    os.write(group, length*sizeof(char));
     return sizeof(ushort)+length*sizeof(char);
-    
 }
 
-template <typename T>
-size_t write_float_array(std::ostream & fs, T * buffer, 
-        const GT_DataArrayHandle & handle) {
+// Copy attribute from GT_DataArrayHandle into a T * buffer
+// and writes that float array to the stream
+template <typename T> 
+size_t write_float_array(
+        std::ostream & os, 
+        T * buffer, 
+        const GT_DataArrayHandle & handle) 
+{
     const uint   entries  = handle->entries();
     const size_t bytesize = entries*handle->getTupleSize()*sizeof(T);
-    // Does really fillArray type convertion?
+    // Does really fillArray type convert?
     handle->fillArray(buffer, 0, entries, handle->getTupleSize());
-    fs.write((char*)&entries, sizeof(uint));
-    fs.write((char*)buffer, bytesize); 
+    os.write((char*)&entries, sizeof(uint));
+    os.write((char*)buffer, bytesize); 
     return sizeof(uint)+bytesize;  
 }
 
-size_t write_material_slots(std::ostream &fs, 
-        const std::vector<std::string> &materials){
+// Writes materials to the stream
+size_t write_material_slots(
+        std::ostream & os, 
+        const std::vector<std::string> & materials)
+{
     const ushort slots = materials.size();
-    fs.write((char*)&slots, sizeof(ushort));
+    os.write((char*)&slots, sizeof(ushort));
     size_t bytes = sizeof(ushort);
 
-    for(const auto & item: materials) {
+    for(const auto & item: materials) 
+    {
         const char * matname = item.c_str();
         const ushort length = strlen(matname);
-        fs.write((char*)&length, sizeof(ushort));
-        fs.write((char*)matname, length*sizeof(char)); 
+        os.write((char*)&length, sizeof(ushort));
+        os.write((char*)matname, length*sizeof(char)); 
         bytes +=  sizeof(ushort) + length*sizeof(char);
     }
     return bytes;
 }
 
+//
+// Basic tesselation class using GT_ library.
+// 
+
+// template<typename T>
+// class TesselatedGeometry
+// {
+// public:
+//     using GT_DataArrayVector = std::vector<GT_DataArrayHandle>;
+
+//     // We save copy of GEO_Detail and tesselate it on the fly
+//     TesselatedGeometry(const GEO_Detail *);
+
+//     // Tesselate routine 
+//     bool tesselate(const bool, const bool);
+
+//     // Find attribute by name, store attribute type in GT_Owner
+//     GT_DataArrayHandle find_attribute(
+//         const char *, 
+//         GT_Owner, 
+//         const bool, 
+//         const GT_Primitive *); 
+
+//     // Save attribute to the provided stream
+//     size_t save_attribute(std::ostream &, 
+//         const GT_DataArrayHandle &);
+
+//     // Our copy geometry
+//     const GT_PrimPolygonMesh * mesh()   const;
+
+//     // Are we valid? 
+//     bool                    isValid()   const;
+
+
+
+// };
+
 template<typename T>
 class TesselatedGeometry
 {
 public:
+
     using GT_DataArrayVector = std::vector<GT_DataArrayHandle>;
+
     TesselatedGeometry(const GEO_Detail * gdp) 
     {
-        // I'm bothered with this copy. 
-        // GT_Primitive makes copies anyway...
-        // TODO: also I would like to copy only suppored prim types.
-        if(!gdp->isEmpty()) {
+        if(!gdp->isEmpty()) 
+        {
            gdpcopy.copy(*gdp);
         }
-        if (!gdpcopy.isEmpty() && tesselate()) {
+
+        if (!gdpcopy.isEmpty() && tesselate()) 
+        {
             valid = true;
         }
     }
@@ -96,7 +147,9 @@ public:
     {
         detailhandle.allocateAndSet(&gdpcopy, false);
         consthandle = GU_ConstDetailHandle(detailhandle);
-        if (!consthandle.isValid()) {
+
+        if (!consthandle.isValid()) 
+        {
             return false;
         }
         // TODO: 
@@ -188,18 +241,6 @@ public:
         return prim->findAttribute(UT_StringRef(attr), owner, 0);
     }
 
-    GT_DataArrayVector find_attributes(const char* attr, GT_Owner owner=GT_OWNER_INVALID, 
-        const bool only_used_points=false) 
-    {
-        GT_DataArrayVector arrays;
-        for(size_t p=0; p<collection.entries(); ++p) {
-            auto part = collection.getPrim(p);
-            auto data = find_attribute(attr, owner, only_used_points, part.get());
-            if (data)
-                arrays.push_back(data);
-        }
-        return arrays;
-    }
 
     size_t save_attribute(std::ostream &fs, const GT_DataArrayHandle & handle) 
     {
@@ -214,35 +255,19 @@ public:
         return bytes;
     }
 
-    size_t save_attributes(std::ostream &fs, const GT_DataArrayVector & handles) 
-    {
-        size_t bytes = 0;
-        for(auto & handle: handles) { 
-            bytes += save_attribute(fs, handle);
-        }
-        return bytes;   
-    }
-
     const GT_PrimPolygonMesh * mesh()   const { return tesselated; }
-    const GT_PrimCollect     * parts()  const { return &collection; }
-
-    bool                    isValid() const { return valid; }
+    bool                    isValid()   const { return valid; }
 
 private:
     GU_DetailHandle      detailhandle;
     GU_ConstDetailHandle consthandle;
     GT_PrimitiveHandle   geometry;
     GU_Detail            gdpcopy;
-    GT_PrimCollect       collection;
-    std::vector<const GT_Primitive *> 
-                            geometries;
     const GT_PrimPolygonMesh * 
                     tesselated  = nullptr;
     std::unique_ptr<T[]> buffer = nullptr;
-    GT_Owner vertex_owner = GT_OWNER_VERTEX;
-    GT_Owner point_owner  = GT_OWNER_POINT;
-    bool      valid       = false;
     size_t    buffersize  = 0;
+    bool      valid       = false;
 
 };
 
@@ -305,12 +330,17 @@ int save_binarymesh(std::ostream & fs, const GEO_Detail *detail)
     GT_DataArrayHandle vertex_indexing; GT_DataArrayHandle vert_info;
     GT_DataArrayHandle prim_info;
 
-    // get all in flat arrays in one shot
-    // FIXME: it won't pass if only triangles are preset in geoemtry. 
-    assert(geometry.mesh()->isConvexed());
-    geometry.mesh()->getConvexArrays(point_indexing, uniform_indexing, 
-        vertex_indexing, vert_info, prim_info);
-   
+    const GT_AttributeListHandle & vertex_attribs = geometry.mesh()->getVertexAttributes();
+
+    // get all in flat arrays in one shot for convexed geo
+    if(geometry.mesh()->isConvexed()) {
+        geometry.mesh()->getConvexArrays(point_indexing, uniform_indexing, 
+            vertex_indexing, vert_info, prim_info);
+    } else {
+        point_indexing  =  geometry.mesh()->getVertexList();
+        vertex_indexing =  vertex_attribs->get(UT_StringRef("__vertex_id"));
+    }
+
     //
     const uint nfaces = geometry.mesh()->getFaceCount();
     datablock.write((char*)&nfaces, sizeof(uint)); 
@@ -319,11 +349,13 @@ int save_binarymesh(std::ostream & fs, const GEO_Detail *detail)
     const bool uv_on_vert     = positionhandle->entries() != uvhandle->entries();
     //
     GT_DataArrayHandle vperface = geometry.mesh()->getFaceCounts();
-    for(size_t face=0, vidx=0; face<nfaces; ++face) {
+    for(size_t face=0, vidx=0; face<nfaces; ++face) 
+    {
         const ushort nvertices = vperface->getI16(GT_Offset(face));
         datablock.write((char*)&nvertices, sizeof(ushort)); 
         const GT_Offset first_vert_offset = geometry.mesh()->getVertexOffset(GT_Offset(face));
-        for (ushort vert=0; vert<nvertices; ++vert, ++vidx) {
+        for (ushort vert=0; vert<nvertices; ++vert, ++vidx) 
+        {
             const uint point_index  = point_indexing->getI32(GT_Offset(first_vert_offset+vert));
             const uint vertex_index = vertex_indexing->getI32(vidx);
             const uint normal_index = normal_on_vert ? vertex_index : point_index;
