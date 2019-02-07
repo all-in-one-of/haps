@@ -380,6 +380,15 @@ def MeshInstance(name, object, **kwargs):
     materials = kwargs.get('materials')
     slots     = kwargs.get('slots')
 
+    if not materials:
+        materials = ('default',)
+
+    if not slots:
+        slots = ('default',)
+
+    if xforms and not times:
+        times = [time*1.0/len(xforms) for time in range(len(xforms))]
+
     if xforms and times:
         obj_inst = TransformBlur(obj_inst, xforms, times)
 

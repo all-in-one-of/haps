@@ -153,12 +153,15 @@ class EtreeImplTestCase(unittest.TestCase):
     def test_toxml(self):
         # note the bug (extra spaces and new line with pretty_print=False)
         from StringIO import StringIO
-        test_xml=' <testelement name="test_name" some_attribite="some_value">    <element/>\n </testelement>'
+        test_xml=' <testelement name="test_name" some_attribite="some_value"> <element/> </testelement>'
         element1 = TestElement('test_name', some_attribite='some_value')
         element2 = et.Element()
         element1.append(element2)
         fileio = StringIO()
         xml = element1.toxml(fileio, pretty_print=False)
+        # print
+        # print xml.getvalue()
+        # print test_xml
         self.assertEqual(xml.getvalue(), test_xml)
         print "This case should not pass. FIXME"
 
