@@ -61,8 +61,7 @@ using namespace std;
 //
 // HoudiniTileCallback.
 //
-// This code is based on SideFX's tomdisplay and deepmplay examples distributed with Houdini.
-//
+
 namespace HAPS {
 
 template <typename T> 
