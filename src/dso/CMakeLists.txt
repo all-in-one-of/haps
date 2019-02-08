@@ -54,6 +54,8 @@ endif()
 
 add_library( GEOappleseedTranslator SHARED
     GEOappleseedTranslator.cpp
+	tesselatedGeometry.h
+	tesselatedGeometry.cpp
     binarymesh.h
 )
 

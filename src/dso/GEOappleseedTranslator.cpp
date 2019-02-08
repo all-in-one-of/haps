@@ -9,12 +9,12 @@
 #include <UT/UT_IOTable.h>
 #include <iostream>
 #include <fstream>
+
 #include "binarymesh.h"
-// #include <stdio.h>
 
-
-namespace HDK_HAPS 
+namespace HAPS_HDK 
 {
+
 class GEO_HAPSIOTranslator : public GEO_IOTranslator
 {
 public:
@@ -67,7 +67,7 @@ GEO_HAPSIOTranslator::fileSave(const GEO_Detail *gdp, std::ostream &os)
 {
     bool result = false;
     if (os) {
-        result = save_binarymesh(os, gdp);
+        result = HAPS_HDK::save_binarymesh(os, gdp);
     } 
     return result;
 }
