@@ -200,12 +200,7 @@ def update_parameters(obj, **kwargs):
             parm.set('value', value)
 
     return obj
-
-
-
-
-
-
+    
             
 def ThinLensCamera(name, **kwargs):
     camera = haps.Camera(name=name, model='thinlens_camera')
