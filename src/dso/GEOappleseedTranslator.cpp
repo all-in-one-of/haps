@@ -30,7 +30,7 @@ public:
 };
 }
 
-using namespace HDK_HAPS;
+using namespace HAPS_HDK;
 
 GEO_IOTranslator *
 GEO_HAPSIOTranslator::duplicate() const
@@ -67,19 +67,19 @@ GEO_HAPSIOTranslator::fileSave(const GEO_Detail *gdp, std::ostream &os)
 {
     bool result = false;
     if (os) {
-        result = HAPS_HDK::save_binarymesh(os, gdp);
+        result = save_binarymesh(os, gdp);
     } 
     return result;
 }
 
 GA_Detail::IOStatus
-GEO_HAPSIOTranslator::fileSaveToFile(const GEO_Detail *gdp, const char *fname)
+GEO_HAPSIOTranslator::fileSaveToFile(const GEO_Detail *gdp, const char *filename)
 {
-    if (!fname)
+    if (!filename)
         return false;
 
     auto result = GA_Detail::IOStatus(false);
-    auto stream = std::ofstream(fname, std::ios::out | std::ios::binary);
+    auto stream = std::ofstream(filename, std::ios::out | std::ios::binary);
     if (stream.is_open()) {
          result = fileSave(gdp, stream);
         stream.close();
