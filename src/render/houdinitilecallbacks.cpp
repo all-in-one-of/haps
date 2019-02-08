@@ -90,8 +90,6 @@ HoudiniTileCallback::send_tile(const renderer::Frame* frame,
     const size_t width, const size_t height, const size_t tile_x, const size_t tile_y) 
 {
     const auto   tile  = frame->image().tile(tile_x, tile_y);
-    // const size_t wtile = tile.get_width();
-    // const size_t htile = tile.get_height();
     const size_t iwtile = frame->image().properties().m_tile_width;
     const size_t ihtile = frame->image().properties().m_tile_height;
 
@@ -114,8 +112,6 @@ HoudiniTileCallback::send_tile_flipped(const renderer::Frame* frame,
     const CanvasProperties& frame_props = frame->image().properties();
     const auto   tile  = frame->image().tile(tile_x, tile_y);
     const size_t chann = frame_props.m_channel_count;
-    // const size_t wtile = tile.get_width();
-    // const size_t htile = tile.get_height();
     const size_t iwtile = frame_props.m_tile_width;
     const size_t ihtile = frame_props.m_tile_height;
 
