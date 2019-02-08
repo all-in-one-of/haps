@@ -110,9 +110,9 @@ IMG_ColorModel HAPS_ColorModel(const size_t channel_count)
 {
     switch(channel_count)
     {
-        case 3 : IMG_RGB;
-        case 4 : IMG_RGBA;
-        default: IMG_CM_UNDEFINED;
+        case 3 : return IMG_RGB;
+        case 4 : return IMG_RGBA;
+        default: return IMG_CM_UNDEFINED;
     }
 };
 
