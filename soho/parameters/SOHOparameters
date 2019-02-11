@@ -1,27 +1,5 @@
-#ifndef __HFS_SOHO_PARAMETERS__
-#define __HFS_SOHO_PARAMETERS__
-
-// It's possible to override this file by adding a different version
-// earlier in the HOUDINI_PATH.  You should have
+// Appleseed specific SOHO paremeters
 #include "$HFS/houdini/soho/parameters/SOHOparameters"
-// to include the system parameters
-
-// By setting the environment variable HOUDINI_SHOW_OLD_RENDER_PROPERTIES,
-// the properties for previous releases will be available.
-
 #include "APSappleseed.ds"
 
-//
-// We do not include the SohoIntrinsics.ds file by default.  However,
-// you can include this if you want (see above).  This contains
-// parameters which are useful for developing your own SOHO output driver.
-//
-// Alternatively, you can simply set the environment variable
-//   HOUDINI_SOHO_DEVELOPER
-// to 1 and these will become available.
-//
-// #if environment(HOUDINI_SOHO_DEVELOPER)
-#include "SohoIntrinsics.ds"
-// #endif
 
-#endif
