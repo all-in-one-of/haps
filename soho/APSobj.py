@@ -167,6 +167,12 @@ def update_parameters(obj, **kwargs):
     This is a helper function usually called by objects
     containing many parameters. This function supports 
     update using /path/entitiy notation (recursive).
+
+    NOTE: that we do not add parms to the object here.
+    None existing parms are simply ignored.
+    (We could actually support it, but this quickly
+        would become a mess.)
+
     :parm obj:      HapsObj to be updated
 
     :parm **kwargs: Python **kwargs arguments: name_of_parm=new_value
@@ -205,33 +211,43 @@ def update_parameters(obj, **kwargs):
 def ThinLensCamera(name, **kwargs):
     camera = haps.Camera(name=name, model='thinlens_camera')
     camera.add_parms([
-        ("shutter_open_time", 0.0001),
-        ("shutter_close_time",   1.0),
-        ("film_dimensions", '18.7 24.9'), # FIXME:
-        ("film_width", 1280), 
-        ("film_height", 720),
-        ("aspect_ratio", 1),
-        ("focal_length", 40), 
-        ("horizontal_fov", 45),
-        ("f_stop",   8.0), 
-        ("focal_distance",  1.0),
-        ("autofocus_target",  [0.5, 0.5]),
-        ("diaphragm_blades",  0),
-        ("diaphragm_tilt_angle",  0.0),
-        ("diaphragm_map",  ''),
-        ("near_z",  -0.001)])
+        ("autofocus_enabled", "false"),
+        ("autofocus_target", "0.5 0.5"),
+        ("diaphragm_blades", "6"),
+        ("diaphragm_map", ""),
+        ("diaphragm_tilt_angle", '0.0'),
+        ("f_stop", '8.0'),
+        ("film_dimensions", "0.01024 0.00576"),
+        ("focal_distance", '1.0'),
+        ("horizontal_fov", "38.505"),
+        ("near_z", "-0.001"),
+        ("shift_x", "0.0"),
+        ("shift_y", "0.0"),
+        ("shutter_open_begin_time", '0.0'),
+        ("shutter_open_end_time", '0.0'),
+        ("shutter_close_begin_time", '0.0'),
+        ("shutter_close_end_time", '0.0'),
+        ])
     camera = update_parameters(camera, **kwargs)
+
+    xforms = kwargs.get('xforms')
+    times  = kwargs.get('times')
+    if not xforms:
+        xforms = [haps.Matrix.identity]
+        times  = [0.0]
+    camera = TransformBlur(camera, xforms, times)
+    
     return camera
 
 
 def PinholeCamera(name, **kwargs):
     camera = haps.Camera(name=name, model='pinhole_camera')
     camera.add_parms([
-        ("shutter_open_time", '0.0'),
-        ("shutter_close_time",   1.0),
+        ("shutter_close_begin_time", '0.0'),
+        ("shutter_close_end_time", '0.0'),
+        ("shutter_open_begin_time", '0.0'),
+        ("shutter_open_end_time", '0.0'),
         ("film_dimensions", '18.7 24.9'), # mm super35
-        # ("aspect_ratio", 1),
-        ("focal_length", 24), #mm
         ("horizontal_fov",   45),
         ("near_z",  -0.001)])
     camera = update_parameters(camera, **kwargs)
@@ -483,15 +499,20 @@ def FinalConfiguration(name='final', **kwargs):
             ("passes", "1"),
             ("pixel_renderer", "uniform"),
             ("sampling_mode", "qmc"),
-            ("shading_result_framebuffer", "ephemeral")])
+            ("shading_result_framebuffer", "ephemeral"),
+            ('spectrum_mode', 'rgb'),
+            ('rendering_threads', '0') 
+            ])
 
-    conf.add(haps.Parameters('adaptive_pixel_renderer').add_parms([
-        ('max_samples', 1),
-        ('min_samples', 3),
-        ('quality', 1.0)]))
+    conf.add(haps.Parameters('light_sampler').add_parms([
+        ('algorithm', 'cdf')
+        ]))
 
     conf.add(haps.Parameters('uniform_pixel_renderer').add_parms([
-        ('samples', 9),]))
+        ('samples', 9),
+        ('decorrelate_pixels', 'true'),
+        ('force_antialiasing', 'true')
+        ]))
 
     conf.add(haps.Parameters('pt').add_parms([
                 ("dl_light_samples", "1.000000"),
@@ -505,7 +526,26 @@ def FinalConfiguration(name='final', **kwargs):
                 ("max_glossy_bounces", "-1"),
                 ("max_specular_bounces", "-1"),
                 ("next_event_estimation", "true"),
-                ("rr_min_path_length", "6")]))
+                ("rr_min_path_length", "6")
+                ]))
+
+    conf.add(haps.Parameters('sppm').add_parms([                 
+                ("alpha", "0.700000"),
+                ("dl_mode", "rt"),
+                ("enable_caustics", "true"),
+                ("enable_ibl", "true"),
+                ("env_photons_per_pass", "1000000"),
+                ("initial_radius", "0.100000"),
+                ("light_photons_per_pass", "1000000"),
+                ("max_photons_per_estimate", "100"),
+                ("path_tracing_max_bounces", "-1"),
+                ("path_tracing_rr_min_path_length", "6"),
+                ("photon_tracing_max_bounces", "-1"),
+                ("photon_tracing_rr_min_path_length", "6"),
+                ("photon_type", "poly"),
+                ]))
+
+
     return conf
 
 def PhysicalSurfaceShader(name, lighting_samples=1):
