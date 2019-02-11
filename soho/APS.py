@@ -180,12 +180,77 @@ reload(haps)
 reload(APSobj)
 reload(APSsettings)
 
-mblur_parms = APSmisc.initializeMotionBlur(cam, now)
+motion_blur_params = APSmisc.initializeMotionBlur(cam, now)
 FPS = soho.getDefaultedFloat('state:fps', [24])[0]
 FPSinv = 1.0 / FPS
 
-aps = APSobj.Appleseed()
-scene    = aps.scene
+aps   = APSobj.Appleseed()
+scene = aps.scene
+
+
+Sampling = {
+    'passes'                                 : soho.getDefaultedInt( 'aps_passes', [''] )[0],
+    'pixel_renderer'                         : 'uniform' if not soho.getDefaultedInt( 'aps_adaptivesampling', [''] )[0] else '',
+    'adaptive_tile_renderer/min_samples'     : soho.getDefaultedInt( 'aps_minsamples', ['16'] )[0],
+    'adaptive_tile_renderer/max_samples'     : soho.getDefaultedInt( 'aps_maxsamples', ['265'], )[0],
+    'adaptive_tile_renderer/batch_size'      : soho.getDefaultedInt( 'aps_batchsize',  ['16'] )[0],
+    'adaptive_tile_renderer/noise_threshold' : soho.getDefaultedFloat( 'aps_variance', ['0.1'] )[0],
+    'uniform_pixel_renderer/samples'         : soho.getDefaultedInt( 'aps_minsamples', ['16'] )[0],
+    'uniform_pixel_renderer/force_antialiasing' : soho.getDefaultedInt( 'aps_uniformforceantialiasing',  ['true'] )[0],
+    'uniform_pixel_renderer/decorrelate_pixels' : soho.getDefaultedInt( 'aps_uniformdecorrelatepixels',  ['true'] )[0],
+    # TODO:
+    # 'samplelock'      : soho.getDefaultedInt( 'aps_samplelock',  ['0'] )[0],
+    # 'randomseed'      : soho.getDefaultedInt( 'aps_randomseed',  ['0'] )[0],
+}
+
+
+Rendering = {
+    'lighting_engine'   : soho.getDefaultedString( 'aps_lightingengine', [''] )[0],
+    'spectrum_mode'     : 'rgb' if not soho.getDefaultedInt( 'aps_spectrummode', [''] )[0] else 'spectral',
+    'rendering_threads' : soho.getDefaultedInt( 'aps_threads',  ['0'] )[0],
+
+}
+
+PathTracing = {
+    'pt/enable_ibl'        : 'true' if soho.getDefaultedInt( 'aps_imagebasedlighting',[True] )[0] else 'false',
+    'pt/enable_dl'         : 'true' if soho.getDefaultedInt( 'aps_directlighing', [True] )[0] else 'false',
+    'pt/enable_caustics'   : 'true' if soho.getDefaultedInt( 'aps_caustics', ['true'] )[0] else 'false',
+    'pt/max_bounces'       : soho.getDefaultedInt( 'aps_maxbounces', [''] )[0],
+    'pt/max_diffuse_bounces'    : soho.getDefaultedInt( 'aps_maxdiffusebounces', [''] )[0],
+    'pt/max_glossy_bounces'     : soho.getDefaultedInt( 'aps_maxglossybounces', [''] )[0],
+    'pt/max_specular_bounces'   : soho.getDefaultedInt( 'aps_maxspecularbounces', [''] )[0],
+    'pt/max_volume_bounces'     : soho.getDefaultedInt( 'aps_maxvolumebounces', [''] )[0],
+    'pt/dl_light_samples'       : soho.getDefaultedInt( 'aps_directlighitngsamples', [''] )[0],
+    'pt/ibl_env_samples'        : soho.getDefaultedInt( 'aps_iblsamples', [''] )[0],
+    'pt/rr_min_path_length'     : soho.getDefaultedInt( 'aps_rrminpathlength', [''] )[0],
+
+}
+
+SPPM = {
+    'sppm/photon_type'       :  soho.getDefaultedString( 'aps_photontype',[''] )[0],
+    'sppm/dl_mode'           :  soho.getDefaultedString( 'aps_sppmdirectlighing',['pt'] )[0],
+    'sppm/enable_ibm'        : 'true' if soho.getDefaultedInt( 'aps_directlighing', [True] )[0] else 'false',
+    'sppm/enable_caustics'   : 'true' if soho.getDefaultedInt( 'aps_caustics', ['true'] )[0] else 'false',
+    'sppm/photon_tracing_max_bounces' : soho.getDefaultedInt( 'aps_maxphotonbounces', [''] )[0],
+    'sppm/path_tracing_max_bounces'   : soho.getDefaultedInt( 'aps_maxpathbounces', [''] )[0],
+    'sppm/light_photons_per_pass'     : soho.getDefaultedInt( 'aps_lightphotons', [''] )[0],
+    'sppm/env_photons_per_pass'   : soho.getDefaultedInt( 'aps_environmentphotons', [''] )[0],
+    'sppm/initial_radius'         : soho.getDefaultedFloat( 'aps_sppminitialradius', [''] )[0],
+    'sppm/max_photons_per_estimate' : soho.getDefaultedInt( 'aps_maxphotonsperestimate', [''] )[0],
+    'sppm/alpha'                    : soho.getDefaultedFloat( 'aps_sppmalpha', ['0.7'] )[0],
+
+}
+########## - Render configuration - ######################################
+aps.Config().insert('FinalConfiguration', 'final')
+aps.Config().insert('InteractiveConfiguration', 'interactive')
+
+final_config = aps.config.get_by_name('final')
+APSobj.update_parameters(final_config, **Rendering)
+APSobj.update_parameters(final_config, **Sampling)
+APSobj.update_parameters(final_config, **PathTracing)
+APSobj.update_parameters(final_config, **SPPM)
+# print final_config
+
 
 
 def exportSOPMaterial(assembly, material_path):
@@ -195,28 +260,39 @@ def exportSOPMaterial(assembly, material_path):
     return material
 
 
-from math import atan, degrees
+import math
 aperture = cam.getDefaultedFloat('aperture', now, [1])[0]
 focal    = cam.getDefaultedFloat('focal', now, [24])[0]
-fovx     =  2 * atan((aperture/2) / focal)    
-xforms, times = APSmisc.get_motionblur_xforms(cam, now, mblur_parms)
+fovx     =  2 * math.atan((aperture/2) / focal)    
+xforms, times = APSmisc.get_motionblur_xforms(cam, now, motion_blur_params)
+allowed_mb    = motion_blur_params['CameraBlur']
 
-camera_parms = {'shutter_open_time' : 0.0 # FIXME (in mantra this lives on rop)
-            ,   'shutter_close_time': cam.getDefaultedFloat('shutter', now, [0])[0]
-            ,   'film_dimensions'   : (cam.getDefaultedInt('res', now, [0,0])[0] / 100.0, 
-                                       cam.getDefaultedInt('res', now, [0,0])[1] / 100.0)
-            ,   'focal_length'      : cam.getDefaultedInt('focal', now, [0,0])[0] / 100.0
-            ,   'horizontal_fov'    : degrees(fovx)    
-            ,   'near_z'            : cam.getDefaultedFloat('near', now, [0.1])[0] * -1
-            ,   'xforms'            : xforms
-            ,   'times'             : times
+camera_parms = {
+            'shutter_open_begin_time'  : '0.0',
+            'shutter_open_end_time'    : '0.0', 
+            'shutter_close_begin_time' : '0.0' if not allowed_mb else cam.getDefaultedFloat('shutter', now, [0])[0], 
+            'shutter_close_end_time'   : '0.0' if not allowed_mb else cam.getDefaultedFloat('shutter', now, [0])[0],  
+            'film_dimensions'          : (cam.getDefaultedInt('res', now, [0,0])[0] / 100.0, 
+                                          cam.getDefaultedInt('res', now, [0,0])[1] / 100.0),
+            'horizontal_fov'          : math.degrees(fovx),  
+            'near_z'                  : cam.getDefaultedFloat('near', now, [0.1])[0] * -1,
+            'focal_distance'          : cam.getDefaultedFloat('focus', now, [0])[0], 
+            'f_stop'                  : cam.getDefaultedFloat('fstop', now, [0])[0], 
+            'xforms'                  : xforms,
+            'times'                   : times,
 }
 
 
-##### CAMERA - Pinhole camera - for now ###################
-camera = APSobj.PinholeCamera(cam.getName(), **camera_parms)
+##################### CAMERA  ###################
+allowed_dof   = soho.getDefaultedInt( 'aps_dof', [''] )[0]
+if allowed_dof:
+    camera = APSobj.ThinLensCamera(cam.getName(), **camera_parms)
+else:
+    camera = APSobj.PinholeCamera(cam.getName(), **camera_parms)
+
 port   = str(soho.getDefaultedInt('vm_image_mplay_socketport', [0])[0])
 is_ipr = str(soho.getDefaultedInt('vm_preview', [-1])[0])
+
 # These are custom params to notify Appleseed about our plans
 camera.add_parms([
     ("socketport", port),
@@ -224,6 +300,8 @@ camera.add_parms([
     ])
 
 scene.add(camera)
+print aps.project
+quit()
 
 # materials_collection = [] # here we track of what we already exported
 unique_gdp_collection = [] # here we store unique instanceas (not fast instances)
@@ -258,14 +336,14 @@ for obj in soho.objectList('objlist:instance'):
     shop_materials = []
 
     filename, shop_materials = APSframe.outputTesselatedGeo(obj, now, 
-        mblur_parms, partition=True, save_gdp=unique_gdp)
+        motion_blur_params, partition=True, save_gdp=unique_gdp)
 
     #No filename nor shop material?
     if (None, None) == (filename, shop_materials):
         continue
 
     # MB for objects
-    xforms, times  = APSmisc.get_motionblur_xforms(obj, now, mblur_parms)
+    xforms, times  = APSmisc.get_motionblur_xforms(obj, now, motion_blur_params)
     # This assembly holds single object which won't be saved again. 
     if unique_gdp:
         assembly_materials = []
@@ -313,7 +391,7 @@ for obj in soho.objectList('objlist:instance'):
 
 ###### Basic lights ######################################
 for light in soho.objectList('objlist:light'):
-    apslight = APSframe.outputLight(light, now, mblur_parms)
+    apslight = APSframe.outputLight(light, now, motion_blur_params)
     if apslight:
         aps.Assembly().emplace(apslight)
     
@@ -325,9 +403,7 @@ aps.Output().insert('Frame', 'beauty', resolution=resolution,
     camera=camera.get('name'))
 
 
-########## - Render configuration - ######################################
-aps.Config().insert('FinalConfiguration', 'final')
-aps.Config().insert('InteractiveConfiguration', 'interactive')
+
 
 
 parm = {'diskfile': SohoParm('soho_diskfile', 'string', ['*'], False)}
